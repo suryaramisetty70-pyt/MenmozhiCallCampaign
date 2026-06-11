@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MENMOZHI AI CALL CENTER — JARVIS Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#05070d;
+  --bg-1:#0a1428;
+  --bg-2:#0f1f3d;
+  --cyan:#00e5ff;
+  --cyan-soft:#7bd9ff;
+  --violet:#8b5cf6;
+  --magenta:#e879f9;
+  --neon:#22d3ee;
+  --green:#10ffb0;
+  --amber:#ffb84d;
+  --red:#ff5577;
+  --text:#e6f4ff;
+  --muted:#7a96b8;
+  --glass:rgba(15,35,68,.55);
+  --glass-2:rgba(10,22,46,.65);
+  --border:rgba(0,229,255,.22);
+  --border-strong:rgba(0,229,255,.45);
+  --grad-aurora:linear-gradient(135deg,#00e5ff 0%,#8b5cf6 50%,#e879f9 100%);
+  --grad-cyan:linear-gradient(135deg,#00e5ff,#22d3ee);
+  --grad-green:linear-gradient(135deg,#10ffb0,#00e5ff);
+  --grad-violet:linear-gradient(135deg,#8b5cf6,#e879f9);
+  --shadow-glow:0 0 40px rgba(0,229,255,.25),0 0 80px rgba(139,92,246,.12);
+  --shadow-card:0 20px 60px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+body{
+  background:
+    radial-gradient(circle at 15% 10%,rgba(0,229,255,.18),transparent 55%),
+    radial-gradient(circle at 85% 30%,rgba(139,92,246,.16),transparent 55%),
+    radial-gradient(circle at 50% 100%,rgba(34,211,238,.12),transparent 60%),
+    var(--bg-0);
+  background-attachment:fixed;
+  padding:24px;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{font-family:'Orbitron',sans-serif;letter-spacing:.04em}
+
+/* ===== Animated background grid + scan line ===== */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,229,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.05) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse at center,#000 40%,transparent 90%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,229,255,.06),transparent);
+  height:120px;animation:scan 8s linear infinite;
+}
+@keyframes scan{0%{transform:translateY(-20vh)}100%{transform:translateY(120vh)}}
+
+/* Floating orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.5;z-index:-2;pointer-events:none;animation:float 14s ease-in-out infinite}
+.orb.o1{width:420px;height:420px;top:-120px;left:-120px;background:radial-gradient(circle,#00e5ff,transparent 70%)}
+.orb.o2{width:480px;height:480px;top:30%;right:-160px;background:radial-gradient(circle,#8b5cf6,transparent 70%);animation-delay:-6s}
+.orb.o3{width:360px;height:360px;bottom:-100px;left:35%;background:radial-gradient(circle,#22d3ee,transparent 70%);animation-delay:-10s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.1)}}
+
+/* ===== Glass surfaces ===== */
+.glass{
+  background:linear-gradient(135deg,var(--glass),var(--glass-2));
+  backdrop-filter:blur(22px) saturate(160%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:var(--shadow-card);
+}
+
+/* ===== Header ===== */
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:22px 28px;margin-bottom:24px;
+  position:relative;overflow:hidden;
+}
+.header::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,.08),transparent);
+  animation:shimmer 6s linear infinite;
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.brand{display:flex;align-items:center;gap:18px;position:relative;z-index:1}
+.logo-mark{
+  width:62px;height:62px;border-radius:16px;position:relative;
+  background:var(--grad-aurora);
+  display:grid;place-items:center;
+  box-shadow:0 0 30px rgba(0,229,255,.5),inset 0 0 20px rgba(255,255,255,.15);
+  animation:pulseLogo 3s ease-in-out infinite;
+}
+.logo-mark svg{width:36px;height:36px}
+@keyframes pulseLogo{0%,100%{box-shadow:0 0 30px rgba(0,229,255,.5),inset 0 0 20px rgba(255,255,255,.15)}50%{box-shadow:0 0 50px rgba(139,92,246,.7),inset 0 0 25px rgba(255,255,255,.2)}}
+.brand-text .name{
+  font-family:'Orbitron',sans-serif;font-weight:800;font-size:22px;
+  background:var(--grad-aurora);-webkit-background-clip:text;background-clip:text;color:transparent;
+  letter-spacing:.08em;
+}
+.brand-text .tagline{font-size:12px;color:var(--cyan-soft);letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+
+.status-panel{display:flex;gap:14px;align-items:center;position:relative;z-index:1}
+.status-pill{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px;border-radius:999px;
+  background:rgba(16,255,176,.08);border:1px solid rgba(16,255,176,.3);
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);
+}
+.status-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(16,255,176,.6);animation:ring 2s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(16,255,176,.6)}70%{box-shadow:0 0 0 10px rgba(16,255,176,0)}100%{box-shadow:0 0 0 0 rgba(16,255,176,0)}}
+.clock{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan-soft);padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:rgba(0,229,255,.05)}
+
+/* ===== System status row ===== */
+.sysrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.sys-item{padding:14px 18px;display:flex;align-items:center;gap:12px}
+.sys-item .ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(0,229,255,.1);border:1px solid var(--border);color:var(--cyan)}
+.sys-item .lbl{font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+.sys-item .val{font-family:'Orbitron',sans-serif;font-weight:600;font-size:14px;color:var(--green);margin-top:2px}
+
+/* ===== Stat cards ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:26px}
+.card{
+  padding:24px;position:relative;overflow:hidden;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s,border-color .4s;
+}
+.card::before{
+  content:"";position:absolute;inset:0;border-radius:18px;padding:1px;
+  background:var(--grad-aurora);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  opacity:0;transition:opacity .4s;pointer-events:none;
+}
+.card:hover{transform:translateY(-6px);box-shadow:0 30px 60px -20px rgba(0,0,0,.8),0 0 40px rgba(0,229,255,.25)}
+.card:hover::before{opacity:1}
+.card h3{font-size:11px;color:var(--cyan-soft);letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3 .icn{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--grad-cyan);color:#03121f}
+.card p.value{
+  font-family:'Orbitron',sans-serif;font-weight:800;font-size:42px;
+  background:var(--grad-aurora);-webkit-background-clip:text;background-clip:text;color:transparent;
+  line-height:1;
+}
+.card .delta{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.card .bar{margin-top:14px;height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.card .bar span{display:block;height:100%;background:var(--grad-aurora);width:70%;border-radius:4px;animation:fill 1.6s ease-out}
+@keyframes fill{from{width:0}}
+
+/* color variants */
+.card.green h3 .icn{background:var(--grad-green);color:#02201a}
+.card.red h3 .icn{background:linear-gradient(135deg,#ff5577,#e879f9);color:#fff}
+.card.amber h3 .icn{background:linear-gradient(135deg,#ffb84d,#ff7b00);color:#2a1500}
+.card.violet h3 .icn{background:var(--grad-violet);color:#fff}
+
+/* ===== Actions / Command bar ===== */
+.actions{
+  display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+  padding:18px;margin-bottom:26px;
+}
+.actions .label{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--cyan-soft);text-transform:uppercase;margin-right:8px}
+.btn{
+  padding:12px 22px;border:none;border-radius:12px;cursor:pointer;
+  font-weight:600;font-size:13px;letter-spacing:.05em;color:#fff;
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  position:relative;overflow:hidden;
+  transition:transform .25s,box-shadow .25s,filter .25s;
+  border:1px solid transparent;
+}
+.btn::after{
+  content:"";position:absolute;inset:0;border-radius:12px;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.25),transparent 70%);
+  transform:translateX(-120%);transition:transform .6s;
+}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.btn:hover::after{transform:translateX(120%)}
+.btn.call{background:var(--grad-green);color:#03201a;box-shadow:0 10px 28px -10px rgba(16,255,176,.6)}
+.btn.export{background:var(--grad-violet);box-shadow:0 10px 28px -10px rgba(139,92,246,.6)}
+.btn.upload{background:var(--grad-cyan);color:#03121f;box-shadow:0 10px 28px -10px rgba(0,229,255,.6)}
+.upload-form{display:flex;gap:10px;align-items:center}
+.upload-form input[type=file]{
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan-soft);
+  padding:10px 12px;border-radius:10px;background:rgba(0,229,255,.05);
+  border:1px dashed var(--border-strong);cursor:pointer;
+}
+.upload-form input[type=file]::file-selector-button{
+  background:transparent;border:none;color:var(--cyan);font-weight:600;margin-right:10px;cursor:pointer;
+}
+
+/* ===== Sections / Tables ===== */
+.section{padding:24px;margin-bottom:24px;position:relative}
+.section h2{
+  display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  font-size:16px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cyan-soft);
+}
+.section h2::before{
+  content:"";width:6px;height:24px;border-radius:3px;background:var(--grad-aurora);
+  box-shadow:0 0 12px rgba(0,229,255,.6);
+}
+.section h2 .count{
+  margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;
+  color:var(--muted);padding:4px 10px;border:1px solid var(--border);border-radius:999px;
+  background:rgba(0,229,255,.05);
+}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+thead th{
+  background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(139,92,246,.12));
+  padding:14px 12px;text-align:left;
+  font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--cyan-soft);font-weight:600;
+  border-bottom:1px solid var(--border);
+}
+thead th:first-child{border-top-left-radius:10px}
+thead th:last-child{border-top-right-radius:10px}
+tbody td{padding:13px 12px;border-bottom:1px solid rgba(0,229,255,.08);color:var(--text)}
+tbody tr{transition:background .2s,transform .2s}
+tbody tr:hover{background:rgba(0,229,255,.06)}
+tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
+
+.small-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--grad-green);color:#03201a;
+  padding:7px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:12px;
+  transition:transform .2s,box-shadow .2s;
+  box-shadow:0 6px 16px -6px rgba(16,255,176,.5);
+}
+.small-btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px -6px rgba(16,255,176,.7)}
+
+/* Status chips for log rows */
+.chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.chip.ok{background:rgba(16,255,176,.12);color:var(--green);border:1px solid rgba(16,255,176,.3)}
+.chip.no{background:rgba(255,85,119,.12);color:var(--red);border:1px solid rgba(255,85,119,.3)}
+.chip.nr{background:rgba(255,184,77,.12);color:var(--amber);border:1px solid rgba(255,184,77,.3)}
+
+/* Empty state */
+.empty{padding:30px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px}
+
+/* Footer */
+.footer{
+  text-align:center;padding:24px;margin-top:30px;
+  border-top:1px solid var(--border);
+  color:var(--muted);font-size:13px;
+}
+.footer .co{font-family:'Orbitron',sans-serif;letter-spacing:.15em;color:var(--cyan-soft);font-weight:600}
+.footer .sub{margin-top:6px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+/* Responsive */
+@media(max-width:768px){
+  body{padding:14px}
+  .header{flex-direction:column;gap:16px;align-items:flex-start}
+  .status-panel{flex-wrap:wrap}
+  .card p.value{font-size:32px}
+  thead th,tbody td{padding:10px 8px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="orb o3"></div>
+
+<!-- ===== HEADER ===== -->
+<header class="header glass">
+  <div class="brand">
+    <div class="logo-mark">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="64" y2="64">
+            <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+            <stop offset="1" stop-color="#fff" stop-opacity=".7"/>
+          </linearGradient>
+        </defs>
+        <path d="M10 50 L22 14 L32 34 L42 14 L54 50" stroke="url(#lg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="32" cy="44" r="3" fill="#fff"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">MENMOZHI TECHNOLOGIES</div>
+      <div class="tagline">AI Call Campaign Command Center</div>
+    </div>
+  </div>
+  <div class="status-panel">
+    <div class="status-pill"><span class="dot"></span> SYSTEM ONLINE</div>
+    <div class="clock" id="clock">{{ logs[0][4] if logs else "No Activity" }}</div>
+  </div>
+</header>
+
+<!-- ===== SYSTEM STATUS BAR ===== -->
+<div class="sysrow">
+  <div class="sys-item glass">
+    <div class="ico">🛰</div>
+    <div><div class="lbl">FastAPI Server</div><div class="val">ACTIVE</div></div>
+  </div>
+  <div class="sys-item glass">
+    <div class="ico">🗄</div>
+    <div><div class="lbl">Database</div><div class="val">CONNECTED</div></div>
+  </div>
+  <div class="sys-item glass">
+    <div class="ico">📡</div>
+    <div><div class="lbl">Campaign Engine</div><div class="val">ACTIVE</div></div>
+  </div>
+  <div class="sys-item glass">
+    <div class="ico">🧠</div>
+    <div><div class="lbl">AI Core</div><div class="val">OPERATIONAL</div></div>
+  </div>
+</div>
+
+<!-- ===== STAT CARDS ===== -->
+<div class="cards">
+  <div class="card glass">
+    <h3><span class="icn">👥</span> Total Contacts</h3>
+    <p class="value">{{ contacts|length }}</p>
+    <div class="delta">// Database population</div>
+    <div class="bar"><span></span></div>
+  </div>
+  <div class="card glass violet">
+    <h3><span class="icn">📞</span> Total Calls</h3>
+    <p class="value">{{ logs|length }}</p>
+    <div class="delta">// Lifetime dispatched</div>
+    <div class="bar"><span></span></div>
+  </div>
+  <div class="card glass green">
+    <h3><span class="icn">✅</span> Available</h3>
+    <p class="value">{{ available_logs|length }}</p>
+    <div class="delta">// Successful pickups</div>
+    <div class="bar"><span></span></div>
+  </div>
+  <div class="card glass red">
+    <h3><span class="icn">❌</span> Not Available</h3>
+    <p class="value">{{ not_available_logs|length }}</p>
+    <div class="delta">// Unreachable</div>
+    <div class="bar"><span></span></div>
+  </div>
+  <div class="card glass amber">
+    <h3><span class="icn">📵</span> No Response</h3>
+    <p class="value">{{ no_response_logs|length }}</p>
+    <div class="delta">// Pending follow-up</div>
+    <div class="bar"><span></span></div>
+  </div>
+</div>
+
+<!-- ===== COMMAND ACTIONS ===== -->
+<div class="actions glass">
+  <span class="label">⚡ Command Console</span>
+  <a href="/call-all" class="btn call">📞 Launch Campaign</a>
+  <a href="/export-logs" class="btn export">⬇ Export Logs</a>
+  <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" required>
+    <button class="btn upload" type="submit">📤 Upload Excel</button>
+  </form>
+</div>
+
+<!-- ===== CONTACTS ===== -->
+<section class="section glass">
+  <h2>📋 Contacts Database <span class="count">{{ contacts|length }} entries</span></h2>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for contact in contacts %}
+      <tr>
+        <td>{{ contact[0] }}</td>
+        <td>{{ contact[1] }}</td>
+        <td>{{ contact[2] }}</td>
+        <td><a class="small-btn" href="/call/{{ contact[0] }}">📞 Call</a></td>
+      </tr>
+    {% endfor %}
+    {% if not contacts %}<tr><td colspan="4" class="empty">// No contacts in database. Upload an Excel file to begin.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== AVAILABLE ===== -->
+<section class="section glass">
+  <h2>✅ Available Contacts <span class="count">{{ available_logs|length }}</span></h2>
+  <table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for row in available_logs %}
+      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip ok">{{ row[4] }}</span></td></tr>
+    {% endfor %}
+    {% if not available_logs %}<tr><td colspan="3" class="empty">// No available pickups recorded yet.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== NOT AVAILABLE ===== -->
+<section class="section glass">
+  <h2>❌ Not Available Contacts <span class="count">{{ not_available_logs|length }}</span></h2>
+  <table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for row in not_available_logs %}
+      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip no">{{ row[4] }}</span></td></tr>
+    {% endfor %}
+    {% if not not_available_logs %}<tr><td colspan="3" class="empty">// No unreachable contacts.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== NO RESPONSE ===== -->
+<section class="section glass">
+  <h2>📵 No Response Contacts <span class="count">{{ no_response_logs|length }}</span></h2>
+  <table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for row in no_response_logs %}
+      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip nr">{{ row[4] }}</span></td></tr>
+    {% endfor %}
+    {% if not no_response_logs %}<tr><td colspan="3" class="empty">// No pending follow-ups.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== CALL LOGS ===== -->
+<section class="section glass">
+  <h2>📞 Recent Call Logs <span class="count">{{ logs|length }} events</span></h2>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for log in logs %}
+      <tr>
+        <td>{{ log[0] }}</td>
+        <td>{{ log[1] }}</td>
+        <td>{{ log[2] }}</td>
+        <td>
+          {% if 'available' in (log[3]|lower) and 'not' not in (log[3]|lower) %}
+            <span class="chip ok">{{ log[3] }}</span>
+          {% elif 'not' in (log[3]|lower) %}
+            <span class="chip no">{{ log[3] }}</span>
+          {% else %}
+            <span class="chip nr">{{ log[3] }}</span>
+          {% endif %}
+        </td>
+        <td style="font-family:'JetBrains Mono',monospace;color:var(--cyan-soft)">{{ log[4] }}</td>
+      </tr>
+    {% endfor %}
+    {% if not logs %}<tr><td colspan="5" class="empty">// No call activity recorded.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  <div class="co">© MENMOZHI TECHNOLOGIES PVT LTD</div>
+  <div class="sub">AI Powered Call Campaign Management System</div>
+</div>
+
+<script>
+  // Live clock — only overrides when logs are empty
+  (function(){
+    const el=document.getElementById('clock');
+    if(!el) return;
+    const txt=el.textContent.trim();
+    if(txt==="No Activity"||txt===""){
+      const tick=()=>{el.textContent=new Date().toLocaleTimeString('en-IN',{hour12:false})};
+      tick();setInterval(tick,1000);
+    }
+  })();
+</script>
+</body>
+</html>
