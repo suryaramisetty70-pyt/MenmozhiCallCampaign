@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-requests
-python-multipart
 jinja2
+python-multipart
+pandas
 openpyxl
+requests
