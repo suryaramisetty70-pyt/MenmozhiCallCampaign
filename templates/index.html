@@ -3,286 +3,437 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MENMOZHI AI CALL CENTER — JARVIS Command</title>
+<title>Menmozhi AI Call Campaign — Command Center</title>
+<meta name="description" content="AI-powered automated call campaign management system by Menmozhi Technologies Pvt Ltd">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='64' y2='64'%3E%3Cstop offset='0' stop-color='%2300e5ff'/%3E%3Cstop offset='1' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230a1428'/%3E%3Cpath d='M14 46 L24 18 L32 34 L40 18 L50 46' stroke='url(%23g)' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='42' r='3' fill='%2300e5ff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ===== DESIGN TOKENS ===== */
 :root{
-  --bg-0:#05070d;
+  --bg-0:#04060e;
   --bg-1:#0a1428;
   --bg-2:#0f1f3d;
+  --bg-3:#162850;
   --cyan:#00e5ff;
   --cyan-soft:#7bd9ff;
+  --cyan-dim:rgba(0,229,255,.08);
   --violet:#8b5cf6;
   --magenta:#e879f9;
   --neon:#22d3ee;
   --green:#10ffb0;
+  --green-dim:rgba(16,255,176,.08);
   --amber:#ffb84d;
+  --amber-dim:rgba(255,184,77,.08);
   --red:#ff5577;
+  --red-dim:rgba(255,85,119,.08);
   --text:#e6f4ff;
-  --muted:#7a96b8;
-  --glass:rgba(15,35,68,.55);
-  --glass-2:rgba(10,22,46,.65);
-  --border:rgba(0,229,255,.22);
-  --border-strong:rgba(0,229,255,.45);
+  --text-secondary:#a8c4e0;
+  --muted:#5a7a9e;
+  --glass:rgba(12,28,58,.65);
+  --glass-2:rgba(8,18,40,.75);
+  --glass-light:rgba(20,45,85,.45);
+  --border:rgba(0,229,255,.15);
+  --border-strong:rgba(0,229,255,.35);
   --grad-aurora:linear-gradient(135deg,#00e5ff 0%,#8b5cf6 50%,#e879f9 100%);
   --grad-cyan:linear-gradient(135deg,#00e5ff,#22d3ee);
   --grad-green:linear-gradient(135deg,#10ffb0,#00e5ff);
   --grad-violet:linear-gradient(135deg,#8b5cf6,#e879f9);
-  --shadow-glow:0 0 40px rgba(0,229,255,.25),0 0 80px rgba(139,92,246,.12);
-  --shadow-card:0 20px 60px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);
+  --grad-red:linear-gradient(135deg,#ff5577,#e879f9);
+  --grad-amber:linear-gradient(135deg,#ffb84d,#ff7b00);
+  --shadow-glow:0 0 40px rgba(0,229,255,.18),0 0 80px rgba(139,92,246,.08);
+  --shadow-card:0 8px 32px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04);
+  --radius:16px;
+  --radius-sm:10px;
+  --radius-xs:8px;
+  --transition:all .3s cubic-bezier(.4,0,.2,1);
 }
+
+/* ===== RESET & BASE ===== */
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth}
 body{
-  background:
-    radial-gradient(circle at 15% 10%,rgba(0,229,255,.18),transparent 55%),
-    radial-gradient(circle at 85% 30%,rgba(139,92,246,.16),transparent 55%),
-    radial-gradient(circle at 50% 100%,rgba(34,211,238,.12),transparent 60%),
-    var(--bg-0);
-  background-attachment:fixed;
-  padding:24px;
-  overflow-x:hidden;
+  font-family:'Inter',system-ui,sans-serif;color:var(--text);min-height:100vh;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  background:var(--bg-0);overflow-x:hidden;
 }
 h1,h2,h3,h4{font-family:'Orbitron',sans-serif;letter-spacing:.04em}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,.2);border-radius:3px}
 
-/* ===== Animated background grid + scan line ===== */
-body::before{
-  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+/* ===== ANIMATED BG ===== */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:
-    linear-gradient(rgba(0,229,255,.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,229,255,.05) 1px,transparent 1px);
-  background-size:44px 44px;
-  mask-image:radial-gradient(ellipse at center,#000 40%,transparent 90%);
+    linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 20%,transparent 100%);
 }
-body::after{
-  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:linear-gradient(180deg,transparent,rgba(0,229,255,.06),transparent);
-  height:120px;animation:scan 8s linear infinite;
+.bg-glow{
+  position:fixed;z-index:0;pointer-events:none;border-radius:50%;
+  filter:blur(100px);opacity:.4;animation:glow-float 20s ease-in-out infinite;
 }
-@keyframes scan{0%{transform:translateY(-20vh)}100%{transform:translateY(120vh)}}
+.bg-glow.g1{width:500px;height:500px;top:-150px;left:-100px;background:#00e5ff}
+.bg-glow.g2{width:600px;height:600px;top:30%;right:-200px;background:#8b5cf6;animation-delay:-8s}
+.bg-glow.g3{width:400px;height:400px;bottom:-100px;left:30%;background:#22d3ee;animation-delay:-14s}
+@keyframes glow-float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,15px) scale(.95)}}
 
-/* Floating orbs */
-.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:.5;z-index:-2;pointer-events:none;animation:float 14s ease-in-out infinite}
-.orb.o1{width:420px;height:420px;top:-120px;left:-120px;background:radial-gradient(circle,#00e5ff,transparent 70%)}
-.orb.o2{width:480px;height:480px;top:30%;right:-160px;background:radial-gradient(circle,#8b5cf6,transparent 70%);animation-delay:-6s}
-.orb.o3{width:360px;height:360px;bottom:-100px;left:35%;background:radial-gradient(circle,#22d3ee,transparent 70%);animation-delay:-10s}
-@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.1)}}
+.scan-line{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,229,255,.04),transparent);
+  height:200px;animation:scan 10s linear infinite;
+}
+@keyframes scan{0%{transform:translateY(-30vh)}100%{transform:translateY(130vh)}}
 
-/* ===== Glass surfaces ===== */
+/* ===== LAYOUT ===== */
+.app{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:20px 24px 40px}
+
+/* ===== GLASS ===== */
 .glass{
-  background:linear-gradient(135deg,var(--glass),var(--glass-2));
-  backdrop-filter:blur(22px) saturate(160%);
-  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  background:linear-gradient(145deg,var(--glass),var(--glass-2));
+  backdrop-filter:blur(24px) saturate(150%);
+  -webkit-backdrop-filter:blur(24px) saturate(150%);
   border:1px solid var(--border);
-  border-radius:18px;
+  border-radius:var(--radius);
   box-shadow:var(--shadow-card);
 }
 
-/* ===== Header ===== */
+/* ===== HEADER ===== */
 .header{
   display:flex;justify-content:space-between;align-items:center;
-  padding:22px 28px;margin-bottom:24px;
-  position:relative;overflow:hidden;
+  padding:18px 24px;margin-bottom:20px;position:relative;overflow:hidden;
 }
-.header::before{
-  content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(0,229,255,.08),transparent);
-  animation:shimmer 6s linear infinite;
+.header::after{
+  content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:var(--grad-aurora);opacity:.4;
 }
-@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-.brand{display:flex;align-items:center;gap:18px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:14px}
 .logo-mark{
-  width:62px;height:62px;border-radius:16px;position:relative;
-  background:var(--grad-aurora);
-  display:grid;place-items:center;
-  box-shadow:0 0 30px rgba(0,229,255,.5),inset 0 0 20px rgba(255,255,255,.15);
-  animation:pulseLogo 3s ease-in-out infinite;
+  width:50px;height:50px;border-radius:13px;position:relative;
+  background:var(--grad-aurora);display:grid;place-items:center;
+  box-shadow:0 0 24px rgba(0,229,255,.4);
+  animation:pulse-logo 4s ease-in-out infinite;
 }
-.logo-mark svg{width:36px;height:36px}
-@keyframes pulseLogo{0%,100%{box-shadow:0 0 30px rgba(0,229,255,.5),inset 0 0 20px rgba(255,255,255,.15)}50%{box-shadow:0 0 50px rgba(139,92,246,.7),inset 0 0 25px rgba(255,255,255,.2)}}
+.logo-mark svg{width:30px;height:30px}
+@keyframes pulse-logo{0%,100%{box-shadow:0 0 24px rgba(0,229,255,.4)}50%{box-shadow:0 0 40px rgba(139,92,246,.6)}}
 .brand-text .name{
-  font-family:'Orbitron',sans-serif;font-weight:800;font-size:22px;
+  font-family:'Orbitron',sans-serif;font-weight:800;font-size:18px;
   background:var(--grad-aurora);-webkit-background-clip:text;background-clip:text;color:transparent;
-  letter-spacing:.08em;
 }
-.brand-text .tagline{font-size:12px;color:var(--cyan-soft);letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+.brand-text .tagline{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
 
-.status-panel{display:flex;gap:14px;align-items:center;position:relative;z-index:1}
+.header-right{display:flex;align-items:center;gap:12px}
 .status-pill{
-  display:flex;align-items:center;gap:8px;
-  padding:9px 14px;border-radius:999px;
-  background:rgba(16,255,176,.08);border:1px solid rgba(16,255,176,.3);
-  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);
+  display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
+  background:rgba(16,255,176,.06);border:1px solid rgba(16,255,176,.25);
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);
 }
-.status-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(16,255,176,.6);animation:ring 2s infinite}
-@keyframes ring{0%{box-shadow:0 0 0 0 rgba(16,255,176,.6)}70%{box-shadow:0 0 0 10px rgba(16,255,176,0)}100%{box-shadow:0 0 0 0 rgba(16,255,176,0)}}
-.clock{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan-soft);padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:rgba(0,229,255,.05)}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:ring 2s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(16,255,176,.5)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.clock{
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan-soft);
+  padding:7px 14px;border:1px solid var(--border);border-radius:999px;background:var(--cyan-dim);
+}
 
-/* ===== System status row ===== */
-.sysrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
-.sys-item{padding:14px 18px;display:flex;align-items:center;gap:12px}
-.sys-item .ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(0,229,255,.1);border:1px solid var(--border);color:var(--cyan)}
-.sys-item .lbl{font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
-.sys-item .val{font-family:'Orbitron',sans-serif;font-weight:600;font-size:14px;color:var(--green);margin-top:2px}
+/* ===== TAB NAVIGATION ===== */
+.tab-nav{
+  display:flex;gap:4px;padding:5px;margin-bottom:20px;
+  background:var(--glass-2);border:1px solid var(--border);border-radius:14px;
+  overflow-x:auto;
+}
+.tab-btn{
+  flex:1;min-width:fit-content;padding:12px 20px;border:none;border-radius:10px;
+  cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;
+  color:var(--muted);background:transparent;transition:var(--transition);
+  display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text);background:rgba(0,229,255,.06)}
+.tab-btn.active{
+  color:#fff;
+  background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(139,92,246,.15));
+  border:1px solid var(--border-strong);
+  box-shadow:0 4px 20px -6px rgba(0,229,255,.3);
+}
+.tab-btn .badge{
+  background:var(--grad-aurora);color:#000;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:999px;min-width:20px;text-align:center;
+}
 
-/* ===== Stat cards ===== */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-bottom:26px}
+.tab-content{display:none;animation:fadeIn .4s ease}
+.tab-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== STAT CARDS ===== */
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
 .card{
-  padding:24px;position:relative;overflow:hidden;
-  transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s,border-color .4s;
+  padding:20px;position:relative;overflow:hidden;cursor:default;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;
 }
 .card::before{
-  content:"";position:absolute;inset:0;border-radius:18px;padding:1px;
-  background:var(--grad-aurora);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;
-  mask-composite:exclude;
-  opacity:0;transition:opacity .4s;pointer-events:none;
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:var(--radius) var(--radius) 0 0;
 }
-.card:hover{transform:translateY(-6px);box-shadow:0 30px 60px -20px rgba(0,0,0,.8),0 0 40px rgba(0,229,255,.25)}
-.card:hover::before{opacity:1}
-.card h3{font-size:11px;color:var(--cyan-soft);letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;font-weight:600;display:flex;align-items:center;gap:8px}
-.card h3 .icn{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--grad-cyan);color:#03121f}
-.card p.value{
-  font-family:'Orbitron',sans-serif;font-weight:800;font-size:42px;
-  background:var(--grad-aurora);-webkit-background-clip:text;background-clip:text;color:transparent;
-  line-height:1;
+.card.c-blue::before{background:var(--grad-cyan)}
+.card.c-violet::before{background:var(--grad-violet)}
+.card.c-green::before{background:var(--grad-green)}
+.card.c-red::before{background:var(--grad-red)}
+.card.c-amber::before{background:var(--grad-amber)}
+.card:hover{transform:translateY(-4px);box-shadow:0 20px 50px -15px rgba(0,0,0,.7)}
+.card .card-icon{
+  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+  font-size:18px;margin-bottom:12px;
 }
-.card .delta{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
-.card .bar{margin-top:14px;height:4px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
-.card .bar span{display:block;height:100%;background:var(--grad-aurora);width:70%;border-radius:4px;animation:fill 1.6s ease-out}
-@keyframes fill{from{width:0}}
+.card.c-blue .card-icon{background:var(--cyan-dim);border:1px solid rgba(0,229,255,.2)}
+.card.c-violet .card-icon{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2)}
+.card.c-green .card-icon{background:var(--green-dim);border:1px solid rgba(16,255,176,.2)}
+.card.c-red .card-icon{background:var(--red-dim);border:1px solid rgba(255,85,119,.2)}
+.card.c-amber .card-icon{background:var(--amber-dim);border:1px solid rgba(255,184,77,.2)}
+.card .card-label{font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.card .card-value{
+  font-family:'Orbitron',sans-serif;font-weight:800;font-size:32px;line-height:1;
+}
+.card.c-blue .card-value{color:var(--cyan)}
+.card.c-violet .card-value{color:var(--violet)}
+.card.c-green .card-value{color:var(--green)}
+.card.c-red .card-value{color:var(--red)}
+.card.c-amber .card-value{color:var(--amber)}
+.card .card-bar{margin-top:12px;height:3px;border-radius:3px;background:rgba(255,255,255,.04);overflow:hidden}
+.card .card-bar span{display:block;height:100%;border-radius:3px;animation:bar-fill 1.2s ease-out}
+.card.c-blue .card-bar span{background:var(--grad-cyan)}
+.card.c-violet .card-bar span{background:var(--grad-violet)}
+.card.c-green .card-bar span{background:var(--grad-green)}
+.card.c-red .card-bar span{background:var(--grad-red)}
+.card.c-amber .card-bar span{background:var(--grad-amber)}
+@keyframes bar-fill{from{width:0 !important}}
 
-/* color variants */
-.card.green h3 .icn{background:var(--grad-green);color:#02201a}
-.card.red h3 .icn{background:linear-gradient(135deg,#ff5577,#e879f9);color:#fff}
-.card.amber h3 .icn{background:linear-gradient(135deg,#ffb84d,#ff7b00);color:#2a1500}
-.card.violet h3 .icn{background:var(--grad-violet);color:#fff}
-
-/* ===== Actions / Command bar ===== */
-.actions{
-  display:flex;gap:14px;flex-wrap:wrap;align-items:center;
-  padding:18px;margin-bottom:26px;
+/* ===== COMMAND BAR ===== */
+.command-bar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  padding:14px 20px;margin-bottom:22px;
 }
-.actions .label{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.2em;color:var(--cyan-soft);text-transform:uppercase;margin-right:8px}
+.command-bar .cmd-label{
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.18em;
+  color:var(--muted);text-transform:uppercase;margin-right:6px;
+}
 .btn{
-  padding:12px 22px;border:none;border-radius:12px;cursor:pointer;
-  font-weight:600;font-size:13px;letter-spacing:.05em;color:#fff;
-  text-decoration:none;display:inline-flex;align-items:center;gap:8px;
-  position:relative;overflow:hidden;
-  transition:transform .25s,box-shadow .25s,filter .25s;
-  border:1px solid transparent;
+  padding:10px 20px;border:none;border-radius:var(--radius-xs);cursor:pointer;
+  font-weight:600;font-size:12px;letter-spacing:.04em;color:#fff;
+  text-decoration:none;display:inline-flex;align-items:center;gap:7px;
+  position:relative;overflow:hidden;transition:var(--transition);
 }
 .btn::after{
-  content:"";position:absolute;inset:0;border-radius:12px;
-  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.25),transparent 70%);
-  transform:translateX(-120%);transition:transform .6s;
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.2),transparent 70%);
+  transform:translateX(-120%);transition:transform .5s;
 }
-.btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.15)}
 .btn:hover::after{transform:translateX(120%)}
-.btn.call{background:var(--grad-green);color:#03201a;box-shadow:0 10px 28px -10px rgba(16,255,176,.6)}
-.btn.export{background:var(--grad-violet);box-shadow:0 10px 28px -10px rgba(139,92,246,.6)}
-.btn.upload{background:var(--grad-cyan);color:#03121f;box-shadow:0 10px 28px -10px rgba(0,229,255,.6)}
-.upload-form{display:flex;gap:10px;align-items:center}
+.btn.call{background:var(--grad-green);color:#031a15;box-shadow:0 8px 24px -8px rgba(16,255,176,.5)}
+.btn.export{background:var(--grad-violet);box-shadow:0 8px 24px -8px rgba(139,92,246,.5)}
+.btn.upload{background:var(--grad-cyan);color:#031520;box-shadow:0 8px 24px -8px rgba(0,229,255,.5)}
+.btn.danger{background:var(--grad-red);box-shadow:0 8px 24px -8px rgba(255,85,119,.5)}
+.btn.sm{padding:6px 14px;font-size:11px;border-radius:6px}
+.upload-form{display:flex;gap:8px;align-items:center}
 .upload-form input[type=file]{
-  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan-soft);
-  padding:10px 12px;border-radius:10px;background:rgba(0,229,255,.05);
-  border:1px dashed var(--border-strong);cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan-soft);
+  padding:8px 12px;border-radius:var(--radius-xs);background:var(--cyan-dim);
+  border:1px dashed var(--border-strong);cursor:pointer;max-width:200px;
 }
 .upload-form input[type=file]::file-selector-button{
-  background:transparent;border:none;color:var(--cyan);font-weight:600;margin-right:10px;cursor:pointer;
+  background:transparent;border:none;color:var(--cyan);font-weight:600;margin-right:8px;cursor:pointer;
 }
 
-/* ===== Sections / Tables ===== */
-.section{padding:24px;margin-bottom:24px;position:relative}
-.section h2{
-  display:flex;align-items:center;gap:12px;margin-bottom:18px;
-  font-size:16px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--cyan-soft);
+/* ===== SECTION ===== */
+.section{padding:20px;margin-bottom:18px;position:relative}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;flex-wrap:wrap;gap:10px;
 }
-.section h2::before{
-  content:"";width:6px;height:24px;border-radius:3px;background:var(--grad-aurora);
-  box-shadow:0 0 12px rgba(0,229,255,.6);
+.section-title{
+  display:flex;align-items:center;gap:10px;
+  font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan-soft);
 }
-.section h2 .count{
-  margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;
-  color:var(--muted);padding:4px 10px;border:1px solid var(--border);border-radius:999px;
-  background:rgba(0,229,255,.05);
+.section-title::before{
+  content:"";width:4px;height:22px;border-radius:2px;background:var(--grad-aurora);
+  box-shadow:0 0 10px rgba(0,229,255,.5);
 }
+.section-title .count{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+  padding:3px 10px;border:1px solid var(--border);border-radius:999px;background:var(--cyan-dim);
+}
+
+/* Search */
+.search-box{
+  display:flex;align-items:center;gap:8px;padding:0 14px;
+  border:1px solid var(--border);border-radius:var(--radius-xs);
+  background:var(--cyan-dim);transition:var(--transition);
+}
+.search-box:focus-within{border-color:var(--border-strong);box-shadow:0 0 20px rgba(0,229,255,.1)}
+.search-box svg{width:16px;height:16px;color:var(--muted);flex-shrink:0}
+.search-box input{
+  background:transparent;border:none;outline:none;color:var(--text);
+  font-family:'Inter',sans-serif;font-size:12px;padding:8px 0;width:180px;
+}
+.search-box input::placeholder{color:var(--muted)}
+
+/* ===== TABLES ===== */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm)}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
 thead th{
-  background:linear-gradient(135deg,rgba(0,229,255,.18),rgba(139,92,246,.12));
-  padding:14px 12px;text-align:left;
-  font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.15em;text-transform:uppercase;
-  color:var(--cyan-soft);font-weight:600;
-  border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(139,92,246,.06));
+  padding:12px 14px;text-align:left;
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);font-weight:600;
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;
 }
-thead th:first-child{border-top-left-radius:10px}
-thead th:last-child{border-top-right-radius:10px}
-tbody td{padding:13px 12px;border-bottom:1px solid rgba(0,229,255,.08);color:var(--text)}
-tbody tr{transition:background .2s,transform .2s}
-tbody tr:hover{background:rgba(0,229,255,.06)}
-tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
+thead th:first-child{border-radius:var(--radius-sm) 0 0 0}
+thead th:last-child{border-radius:0 var(--radius-sm) 0 0}
+tbody td{padding:11px 14px;border-bottom:1px solid rgba(0,229,255,.05);color:var(--text-secondary);transition:var(--transition)}
+tbody tr{transition:background .2s}
+tbody tr:hover{background:rgba(0,229,255,.04)}
+tbody tr:hover td{color:var(--text)}
+tbody tr:last-child td{border-bottom:none}
+td.name-cell{color:var(--text);font-weight:500}
+td.phone-cell{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan-soft)}
+td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
 
-.small-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--grad-green);color:#03201a;
-  padding:7px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:12px;
-  transition:transform .2s,box-shadow .2s;
-  box-shadow:0 6px 16px -6px rgba(16,255,176,.5);
+/* Action buttons in table */
+.action-cell{display:flex;gap:6px;align-items:center}
+.tbl-btn{
+  padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;
+  text-decoration:none;display:inline-flex;align-items:center;gap:4px;
+  transition:var(--transition);cursor:pointer;border:none;
 }
-.small-btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px -6px rgba(16,255,176,.7)}
+.tbl-btn.call-btn{background:rgba(16,255,176,.1);color:var(--green);border:1px solid rgba(16,255,176,.2)}
+.tbl-btn.call-btn:hover{background:rgba(16,255,176,.2);box-shadow:0 4px 12px -4px rgba(16,255,176,.4)}
+.tbl-btn.del-btn{background:rgba(255,85,119,.08);color:var(--red);border:1px solid rgba(255,85,119,.15)}
+.tbl-btn.del-btn:hover{background:rgba(255,85,119,.15);box-shadow:0 4px 12px -4px rgba(255,85,119,.4)}
 
-/* Status chips for log rows */
-.chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
-.chip.ok{background:rgba(16,255,176,.12);color:var(--green);border:1px solid rgba(16,255,176,.3)}
-.chip.no{background:rgba(255,85,119,.12);color:var(--red);border:1px solid rgba(255,85,119,.3)}
-.chip.nr{background:rgba(255,184,77,.12);color:var(--amber);border:1px solid rgba(255,184,77,.3)}
+/* Status chips */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:999px;font-size:10px;font-weight:600;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.04em;
+}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%}
+.chip.ok{background:rgba(16,255,176,.1);color:var(--green);border:1px solid rgba(16,255,176,.25)}
+.chip.ok::before{background:var(--green)}
+.chip.no{background:rgba(255,85,119,.1);color:var(--red);border:1px solid rgba(255,85,119,.25)}
+.chip.no::before{background:var(--red)}
+.chip.nr{background:rgba(255,184,77,.1);color:var(--amber);border:1px solid rgba(255,184,77,.25)}
+.chip.nr::before{background:var(--amber)}
 
-/* Empty state */
-.empty{padding:30px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px}
+.empty{padding:40px;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px}
 
-/* Footer */
+/* ===== DONUT CHART ===== */
+.chart-section{display:flex;gap:20px;margin-bottom:22px;flex-wrap:wrap}
+.chart-card{padding:24px;flex:1;min-width:280px;display:flex;flex-direction:column;align-items:center}
+.chart-card h3{font-size:12px;color:var(--cyan-soft);letter-spacing:.12em;text-transform:uppercase;margin-bottom:20px}
+.donut-wrap{position:relative;width:180px;height:180px}
+.donut-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut-wrap circle{fill:none;stroke-width:14;stroke-linecap:round;transition:stroke-dasharray 1.2s ease}
+.donut-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.donut-center .num{font-family:'Orbitron',sans-serif;font-weight:800;font-size:28px;color:var(--text)}
+.donut-center .lbl{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+.chart-legend{display:flex;flex-direction:column;gap:10px;margin-top:20px;width:100%}
+.legend-item{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.legend-item .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-item .name{font-size:12px;color:var(--text-secondary);flex:1}
+.legend-item .val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+
+/* Stats list */
+.stats-list{padding:24px;flex:1;min-width:280px}
+.stats-list h3{font-size:12px;color:var(--cyan-soft);letter-spacing:.12em;text-transform:uppercase;margin-bottom:20px}
+.stat-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 0;border-bottom:1px solid rgba(0,229,255,.06);
+}
+.stat-row:last-child{border-bottom:none}
+.stat-row .stat-name{font-size:13px;color:var(--text-secondary)}
+.stat-row .stat-val{font-family:'Orbitron',sans-serif;font-weight:700;font-size:18px}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(4,6,14,.85);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex;animation:fadeIn .3s ease}
+.modal{
+  padding:32px;max-width:420px;width:90%;text-align:center;
+}
+.modal h3{font-size:16px;margin-bottom:8px;color:var(--text)}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.modal-actions{display:flex;gap:10px;justify-content:center}
+.modal .btn{min-width:120px;justify-content:center}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:10px}
+.toast{
+  padding:14px 20px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:500;color:var(--text);
+  display:flex;align-items:center;gap:10px;min-width:280px;
+  animation:slideIn .4s ease,fadeOut .4s ease 3s forwards;
+  box-shadow:0 12px 40px -10px rgba(0,0,0,.6);
+}
+.toast.success{background:linear-gradient(135deg,rgba(16,255,176,.15),rgba(0,229,255,.1));border:1px solid rgba(16,255,176,.3)}
+.toast.error{background:linear-gradient(135deg,rgba(255,85,119,.15),rgba(232,121,249,.1));border:1px solid rgba(255,85,119,.3)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-10px)}}
+
+/* ===== FOOTER ===== */
 .footer{
-  text-align:center;padding:24px;margin-top:30px;
+  text-align:center;padding:24px;margin-top:20px;
   border-top:1px solid var(--border);
-  color:var(--muted);font-size:13px;
 }
-.footer .co{font-family:'Orbitron',sans-serif;letter-spacing:.15em;color:var(--cyan-soft);font-weight:600}
-.footer .sub{margin-top:6px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.footer .co{font-family:'Orbitron',sans-serif;letter-spacing:.12em;color:var(--cyan-soft);font-weight:600;font-size:13px}
+.footer .sub{margin-top:4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .cards{grid-template-columns:repeat(3,1fr)}
+}
 @media(max-width:768px){
-  body{padding:14px}
-  .header{flex-direction:column;gap:16px;align-items:flex-start}
-  .status-panel{flex-wrap:wrap}
-  .card p.value{font-size:32px}
-  thead th,tbody td{padding:10px 8px;font-size:12px}
+  .app{padding:12px}
+  .header{flex-direction:column;gap:12px;align-items:flex-start;padding:14px 16px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .card .card-value{font-size:24px}
+  .tab-nav{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab-btn{padding:10px 14px;font-size:12px}
+  .command-bar{padding:12px}
+  .chart-section{flex-direction:column}
+  thead th,tbody td{padding:8px 10px;font-size:11px}
+  .search-box input{width:120px}
+}
+@media(max-width:480px){
+  .cards{grid-template-columns:1fr 1fr}
+  .brand-text .name{font-size:14px}
 }
 </style>
 </head>
 <body>
 
-<div class="orb o1"></div>
-<div class="orb o2"></div>
-<div class="orb o3"></div>
+<div class="bg-grid"></div>
+<div class="bg-glow g1"></div>
+<div class="bg-glow g2"></div>
+<div class="bg-glow g3"></div>
+<div class="scan-line"></div>
+
+<div class="app">
 
 <!-- ===== HEADER ===== -->
 <header class="header glass">
   <div class="brand">
     <div class="logo-mark">
       <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="lg" x1="0" y1="0" x2="64" y2="64">
-            <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-            <stop offset="1" stop-color="#fff" stop-opacity=".7"/>
-          </linearGradient>
-        </defs>
-        <path d="M10 50 L22 14 L32 34 L42 14 L54 50" stroke="url(#lg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        <circle cx="32" cy="44" r="3" fill="#fff"/>
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity=".7"/></linearGradient></defs>
+        <path d="M12 48 L22 16 L32 34 L42 16 L52 48" stroke="url(#lg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="32" cy="43" r="3" fill="#fff"/>
       </svg>
     </div>
     <div class="brand-text">
@@ -290,165 +441,268 @@ tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
       <div class="tagline">AI Call Campaign Command Center</div>
     </div>
   </div>
-  <div class="status-panel">
-    <div class="status-pill"><span class="dot"></span> SYSTEM ONLINE</div>
-    <div class="clock" id="clock">{{ logs[0][4] if logs else "No Activity" }}</div>
+  <div class="header-right">
+    <div class="status-pill"><span class="dot"></span>SYSTEM ONLINE</div>
+    <div class="clock" id="clock">--:--:--</div>
   </div>
 </header>
 
-<!-- ===== SYSTEM STATUS BAR ===== -->
-<div class="sysrow">
-  <div class="sys-item glass">
-    <div class="ico">🛰</div>
-    <div><div class="lbl">FastAPI Server</div><div class="val">ACTIVE</div></div>
-  </div>
-  <div class="sys-item glass">
-    <div class="ico">🗄</div>
-    <div><div class="lbl">Database</div><div class="val">CONNECTED</div></div>
-  </div>
-  <div class="sys-item glass">
-    <div class="ico">📡</div>
-    <div><div class="lbl">Campaign Engine</div><div class="val">ACTIVE</div></div>
-  </div>
-  <div class="sys-item glass">
-    <div class="ico">🧠</div>
-    <div><div class="lbl">AI Core</div><div class="val">OPERATIONAL</div></div>
-  </div>
-</div>
-
 <!-- ===== STAT CARDS ===== -->
 <div class="cards">
-  <div class="card glass">
-    <h3><span class="icn">👥</span> Total Contacts</h3>
-    <p class="value">{{ contacts|length }}</p>
-    <div class="delta">// Database population</div>
-    <div class="bar"><span></span></div>
+  <div class="card glass c-blue">
+    <div class="card-icon">👥</div>
+    <div class="card-label">Total Contacts</div>
+    <div class="card-value" id="stat-contacts">{{ contacts|length }}</div>
+    <div class="card-bar"><span style="width:100%"></span></div>
   </div>
-  <div class="card glass violet">
-    <h3><span class="icn">📞</span> Total Calls</h3>
-    <p class="value">{{ logs|length }}</p>
-    <div class="delta">// Lifetime dispatched</div>
-    <div class="bar"><span></span></div>
+  <div class="card glass c-violet">
+    <div class="card-icon">📞</div>
+    <div class="card-label">Total Calls</div>
+    <div class="card-value" id="stat-calls">{{ logs|length }}</div>
+    <div class="card-bar"><span style="width:{{ (logs|length / (contacts|length if contacts|length > 0 else 1) * 100)|int }}%"></span></div>
   </div>
-  <div class="card glass green">
-    <h3><span class="icn">✅</span> Available</h3>
-    <p class="value">{{ available_logs|length }}</p>
-    <div class="delta">// Successful pickups</div>
-    <div class="bar"><span></span></div>
+  <div class="card glass c-green">
+    <div class="card-icon">✅</div>
+    <div class="card-label">Available</div>
+    <div class="card-value" id="stat-available">{{ available_logs|length }}</div>
+    <div class="card-bar"><span style="width:{{ (available_logs|length / (logs|length if logs|length > 0 else 1) * 100)|int }}%"></span></div>
   </div>
-  <div class="card glass red">
-    <h3><span class="icn">❌</span> Not Available</h3>
-    <p class="value">{{ not_available_logs|length }}</p>
-    <div class="delta">// Unreachable</div>
-    <div class="bar"><span></span></div>
+  <div class="card glass c-red">
+    <div class="card-icon">❌</div>
+    <div class="card-label">Not Available</div>
+    <div class="card-value" id="stat-not-available">{{ not_available_logs|length }}</div>
+    <div class="card-bar"><span style="width:{{ (not_available_logs|length / (logs|length if logs|length > 0 else 1) * 100)|int }}%"></span></div>
   </div>
-  <div class="card glass amber">
-    <h3><span class="icn">📵</span> No Response</h3>
-    <p class="value">{{ no_response_logs|length }}</p>
-    <div class="delta">// Pending follow-up</div>
-    <div class="bar"><span></span></div>
+  <div class="card glass c-amber">
+    <div class="card-icon">📵</div>
+    <div class="card-label">No Response</div>
+    <div class="card-value" id="stat-no-response">{{ no_response_logs|length }}</div>
+    <div class="card-bar"><span style="width:{{ (no_response_logs|length / (logs|length if logs|length > 0 else 1) * 100)|int }}%"></span></div>
   </div>
 </div>
 
-<!-- ===== COMMAND ACTIONS ===== -->
-<div class="actions glass">
-  <span class="label">⚡ Command Console</span>
-  <a href="/call-all" class="btn call">📞 Launch Campaign</a>
-  <a href="/export-logs" class="btn export">⬇ Export Logs</a>
-  <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" required>
-    <button class="btn upload" type="submit">📤 Upload Excel</button>
-  </form>
+<!-- ===== TAB NAVIGATION ===== -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="dashboard" id="tab-dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="contacts" id="tab-contacts">📋 Contacts <span class="badge">{{ contacts|length }}</span></button>
+  <button class="tab-btn" data-tab="available" id="tab-available">✅ Available <span class="badge">{{ available_logs|length }}</span></button>
+  <button class="tab-btn" data-tab="not-available" id="tab-not-available">❌ Not Available <span class="badge">{{ not_available_logs|length }}</span></button>
+  <button class="tab-btn" data-tab="no-response" id="tab-no-response">📵 No Response <span class="badge">{{ no_response_logs|length }}</span></button>
+  <button class="tab-btn" data-tab="logs" id="tab-logs">📜 All Logs <span class="badge">{{ logs|length }}</span></button>
+</nav>
+
+<!-- ===== TAB: DASHBOARD ===== -->
+<div class="tab-content active" id="panel-dashboard">
+
+  <!-- Command Bar -->
+  <div class="command-bar glass">
+    <span class="cmd-label">⚡ Commands</span>
+    <button class="btn call" onclick="confirmAction('Launch Campaign', 'This will call ALL contacts in your database. Are you sure?', '/call-all')">📞 Launch Campaign</button>
+    <a href="/export-logs" class="btn export">📥 Export Logs</a>
+    <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".xlsx,.xls" required>
+      <button class="btn upload" type="submit">📤 Upload Excel</button>
+    </form>
+    <button class="btn danger sm" onclick="confirmAction('Clear All Logs', 'This will permanently delete all call logs. Continue?', '/delete-all-logs')">🗑 Clear Logs</button>
+  </div>
+
+  <!-- Chart + Stats -->
+  <div class="chart-section">
+    <div class="chart-card glass">
+      <h3>📊 Call Distribution</h3>
+      <div class="donut-wrap">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="80" stroke="rgba(255,255,255,.04)" stroke-width="14" fill="none"/>
+          <circle id="donut-available" cx="100" cy="100" r="80" stroke="#10ffb0" stroke-dasharray="0 503" stroke-width="14" fill="none"/>
+          <circle id="donut-not-available" cx="100" cy="100" r="80" stroke="#ff5577" stroke-dasharray="0 503" stroke-width="14" fill="none"/>
+          <circle id="donut-no-response" cx="100" cy="100" r="80" stroke="#ffb84d" stroke-dasharray="0 503" stroke-width="14" fill="none"/>
+        </svg>
+        <div class="donut-center">
+          <div class="num" id="donut-total">{{ logs|length }}</div>
+          <div class="lbl">Total Calls</div>
+        </div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="dot" style="background:var(--green)"></div><span class="name">Available</span><span class="val" style="color:var(--green)" id="legend-avail">{{ available_logs|length }}</span></div>
+        <div class="legend-item"><div class="dot" style="background:var(--red)"></div><span class="name">Not Available</span><span class="val" style="color:var(--red)" id="legend-notavail">{{ not_available_logs|length }}</span></div>
+        <div class="legend-item"><div class="dot" style="background:var(--amber)"></div><span class="name">No Response</span><span class="val" style="color:var(--amber)" id="legend-noresp">{{ no_response_logs|length }}</span></div>
+      </div>
+    </div>
+    <div class="stats-list glass">
+      <h3>📈 Campaign Analytics</h3>
+      <div class="stat-row"><span class="stat-name">Total Contacts Loaded</span><span class="stat-val" style="color:var(--cyan)" id="ana-contacts">{{ contacts|length }}</span></div>
+      <div class="stat-row"><span class="stat-name">Calls Dispatched</span><span class="stat-val" style="color:var(--violet)" id="ana-calls">{{ logs|length }}</span></div>
+      <div class="stat-row"><span class="stat-name">Success Rate</span><span class="stat-val" style="color:var(--green)" id="ana-rate">{% if logs|length > 0 %}{{ ((available_logs|length / logs|length) * 100)|round(1) }}%{% else %}0%{% endif %}</span></div>
+      <div class="stat-row"><span class="stat-name">Rejection Rate</span><span class="stat-val" style="color:var(--red)">{% if logs|length > 0 %}{{ ((not_available_logs|length / logs|length) * 100)|round(1) }}%{% else %}0%{% endif %}</span></div>
+      <div class="stat-row"><span class="stat-name">Pending Follow-ups</span><span class="stat-val" style="color:var(--amber)">{{ no_response_logs|length }}</span></div>
+    </div>
+  </div>
 </div>
 
-<!-- ===== CONTACTS ===== -->
-<section class="section glass">
-  <h2>📋 Contacts Database <span class="count">{{ contacts|length }} entries</span></h2>
-  <table>
-    <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Action</th></tr></thead>
-    <tbody>
-    {% for contact in contacts %}
-      <tr>
-        <td>{{ contact[0] }}</td>
-        <td>{{ contact[1] }}</td>
-        <td>{{ contact[2] }}</td>
-        <td><a class="small-btn" href="/call/{{ contact[0] }}">📞 Call</a></td>
-      </tr>
-    {% endfor %}
-    {% if not contacts %}<tr><td colspan="4" class="empty">// No contacts in database. Upload an Excel file to begin.</td></tr>{% endif %}
-    </tbody>
-  </table>
-</section>
+<!-- ===== TAB: CONTACTS ===== -->
+<div class="tab-content" id="panel-contacts">
+  <section class="section glass">
+    <div class="section-header">
+      <h2 class="section-title">📋 Contacts Database <span class="count">{{ contacts|length }} entries</span></h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="search-contacts" placeholder="Search contacts..." oninput="filterTable('contacts-table', this.value)">
+        </div>
+        <button class="btn danger sm" onclick="confirmAction('Delete All Contacts', 'This will permanently delete ALL contacts. Continue?', '/delete-all-contacts')">🗑 Clear All</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="contacts-table">
+        <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for contact in contacts %}
+          <tr>
+            <td>{{ contact[0] }}</td>
+            <td class="name-cell">{{ contact[1] }}</td>
+            <td class="phone-cell">{{ contact[2] }}</td>
+            <td>
+              <div class="action-cell">
+                <a class="tbl-btn call-btn" href="/call/{{ contact[0] }}">📞 Call</a>
+                <button class="tbl-btn del-btn" onclick="confirmAction('Delete Contact', 'Remove {{ contact[1] }} from contacts?', '/delete-contact/{{ contact[0] }}')">✕</button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        {% if not contacts %}<tr><td colspan="4" class="empty">// No contacts in database. Upload an Excel file to begin.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
-<!-- ===== AVAILABLE ===== -->
-<section class="section glass">
-  <h2>✅ Available Contacts <span class="count">{{ available_logs|length }}</span></h2>
-  <table>
-    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
-    <tbody>
-    {% for row in available_logs %}
-      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip ok">{{ row[4] }}</span></td></tr>
-    {% endfor %}
-    {% if not available_logs %}<tr><td colspan="3" class="empty">// No available pickups recorded yet.</td></tr>{% endif %}
-    </tbody>
-  </table>
-</section>
+<!-- ===== TAB: AVAILABLE ===== -->
+<div class="tab-content" id="panel-available">
+  <section class="section glass">
+    <div class="section-header">
+      <h2 class="section-title">✅ Available Contacts <span class="count">{{ available_logs|length }}</span></h2>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search..." oninput="filterTable('available-table', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="available-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>
+        {% for row in available_logs %}
+          <tr>
+            <td class="name-cell">{{ row[1] }}</td>
+            <td class="phone-cell">{{ row[2] }}</td>
+            <td><span class="chip ok">AVAILABLE</span></td>
+            <td class="time-cell">{{ row[4] }}</td>
+          </tr>
+        {% endfor %}
+        {% if not available_logs %}<tr><td colspan="4" class="empty">// No available responses recorded yet.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
-<!-- ===== NOT AVAILABLE ===== -->
-<section class="section glass">
-  <h2>❌ Not Available Contacts <span class="count">{{ not_available_logs|length }}</span></h2>
-  <table>
-    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
-    <tbody>
-    {% for row in not_available_logs %}
-      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip no">{{ row[4] }}</span></td></tr>
-    {% endfor %}
-    {% if not not_available_logs %}<tr><td colspan="3" class="empty">// No unreachable contacts.</td></tr>{% endif %}
-    </tbody>
-  </table>
-</section>
+<!-- ===== TAB: NOT AVAILABLE ===== -->
+<div class="tab-content" id="panel-not-available">
+  <section class="section glass">
+    <div class="section-header">
+      <h2 class="section-title">❌ Not Available Contacts <span class="count">{{ not_available_logs|length }}</span></h2>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search..." oninput="filterTable('not-available-table', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="not-available-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>
+        {% for row in not_available_logs %}
+          <tr>
+            <td class="name-cell">{{ row[1] }}</td>
+            <td class="phone-cell">{{ row[2] }}</td>
+            <td><span class="chip no">NOT AVAILABLE</span></td>
+            <td class="time-cell">{{ row[4] }}</td>
+          </tr>
+        {% endfor %}
+        {% if not not_available_logs %}<tr><td colspan="4" class="empty">// No unreachable contacts recorded.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
-<!-- ===== NO RESPONSE ===== -->
-<section class="section glass">
-  <h2>📵 No Response Contacts <span class="count">{{ no_response_logs|length }}</span></h2>
-  <table>
-    <thead><tr><th>Name</th><th>Phone</th><th>Time</th></tr></thead>
-    <tbody>
-    {% for row in no_response_logs %}
-      <tr><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td><span class="chip nr">{{ row[4] }}</span></td></tr>
-    {% endfor %}
-    {% if not no_response_logs %}<tr><td colspan="3" class="empty">// No pending follow-ups.</td></tr>{% endif %}
-    </tbody>
-  </table>
-</section>
+<!-- ===== TAB: NO RESPONSE ===== -->
+<div class="tab-content" id="panel-no-response">
+  <section class="section glass">
+    <div class="section-header">
+      <h2 class="section-title">📵 No Response Contacts <span class="count">{{ no_response_logs|length }}</span></h2>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search..." oninput="filterTable('no-response-table', this.value)">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="no-response-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>
+        {% for row in no_response_logs %}
+          <tr>
+            <td class="name-cell">{{ row[1] }}</td>
+            <td class="phone-cell">{{ row[2] }}</td>
+            <td><span class="chip nr">NO RESPONSE</span></td>
+            <td class="time-cell">{{ row[4] }}</td>
+          </tr>
+        {% endfor %}
+        {% if not no_response_logs %}<tr><td colspan="4" class="empty">// No pending follow-ups.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
-<!-- ===== CALL LOGS ===== -->
-<section class="section glass">
-  <h2>📞 Recent Call Logs <span class="count">{{ logs|length }} events</span></h2>
-  <table>
-    <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
-    <tbody>
-    {% for log in logs %}
-      <tr>
-        <td>{{ log[0] }}</td>
-        <td>{{ log[1] }}</td>
-        <td>{{ log[2] }}</td>
-        <td>
-          {% if 'available' in (log[3]|lower) and 'not' not in (log[3]|lower) %}
-            <span class="chip ok">{{ log[3] }}</span>
-          {% elif 'not' in (log[3]|lower) %}
-            <span class="chip no">{{ log[3] }}</span>
-          {% else %}
-            <span class="chip nr">{{ log[3] }}</span>
-          {% endif %}
-        </td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--cyan-soft)">{{ log[4] }}</td>
-      </tr>
-    {% endfor %}
-    {% if not logs %}<tr><td colspan="5" class="empty">// No call activity recorded.</td></tr>{% endif %}
-    </tbody>
-  </table>
-</section>
+<!-- ===== TAB: ALL LOGS ===== -->
+<div class="tab-content" id="panel-logs">
+  <section class="section glass">
+    <div class="section-header">
+      <h2 class="section-title">📜 Complete Call History <span class="count">{{ logs|length }} events</span></h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search logs..." oninput="filterTable('logs-table', this.value)">
+        </div>
+        <a href="/export-logs" class="btn export sm">📥 Export</a>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="logs-table">
+        <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>
+        {% for log in logs %}
+          <tr>
+            <td>{{ log[0] }}</td>
+            <td class="name-cell">{{ log[1] }}</td>
+            <td class="phone-cell">{{ log[2] }}</td>
+            <td>
+              {% if log[3] == 'AVAILABLE' %}
+                <span class="chip ok">AVAILABLE</span>
+              {% elif log[3] == 'NOT AVAILABLE' %}
+                <span class="chip no">NOT AVAILABLE</span>
+              {% else %}
+                <span class="chip nr">{{ log[3] }}</span>
+              {% endif %}
+            </td>
+            <td class="time-cell">{{ log[4] }}</td>
+          </tr>
+        {% endfor %}
+        {% if not logs %}<tr><td colspan="5" class="empty">// No call activity recorded.</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
 <!-- ===== FOOTER ===== -->
 <div class="footer">
@@ -456,17 +710,186 @@ tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--cyan)}
   <div class="sub">AI Powered Call Campaign Management System</div>
 </div>
 
+</div><!-- /app -->
+
+<!-- ===== CONFIRMATION MODAL ===== -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal glass">
+    <h3 id="modal-title">Confirm Action</h3>
+    <p id="modal-message">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn" style="background:rgba(255,255,255,.06);border:1px solid var(--border)" onclick="closeModal()">Cancel</button>
+      <a class="btn call" id="modal-confirm" href="#">Confirm</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script>
-  // Live clock — only overrides when logs are empty
-  (function(){
-    const el=document.getElementById('clock');
-    if(!el) return;
-    const txt=el.textContent.trim();
-    if(txt==="No Activity"||txt===""){
-      const tick=()=>{el.textContent=new Date().toLocaleTimeString('en-IN',{hour12:false})};
-      tick();setInterval(tick,1000);
-    }
-  })();
+// ===== LIVE CLOCK =====
+(function(){
+  const el=document.getElementById('clock');
+  const tick=()=>{
+    const now=new Date();
+    el.textContent=now.toLocaleTimeString('en-IN',{hour12:true,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  tick();setInterval(tick,1000);
+})();
+
+// ===== TABS =====
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== SEARCH / FILTER =====
+function filterTable(tableId,query){
+  const rows=document.querySelectorAll('#'+tableId+' tbody tr');
+  const q=query.toLowerCase();
+  rows.forEach(row=>{
+    if(row.querySelector('.empty')){row.style.display='';return;}
+    const text=row.textContent.toLowerCase();
+    row.style.display=text.includes(q)?'':'none';
+  });
+}
+
+// ===== CONFIRMATION MODAL =====
+function confirmAction(title,message,url){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-message').textContent=message;
+  document.getElementById('modal-confirm').href=url;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('confirmModal').classList.remove('show');
+}
+document.getElementById('confirmModal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
+});
+
+// ===== TOAST =====
+function showToast(message,type='success'){
+  const container=document.getElementById('toastContainer');
+  const toast=document.createElement('div');
+  toast.className='toast '+type;
+  toast.innerHTML=(type==='success'?'✅':'❌')+' '+message;
+  container.appendChild(toast);
+  setTimeout(()=>toast.remove(),3500);
+}
+
+// ===== UPDATE ALL DASHBOARD STATS & DONUT =====
+function updateDashboardStats(d) {
+  // Update main card numbers
+  document.getElementById('stat-contacts').textContent = d.total_contacts;
+  document.getElementById('stat-calls').textContent = d.total_calls;
+  document.getElementById('stat-available').textContent = d.available;
+  document.getElementById('stat-not-available').textContent = d.not_available;
+  document.getElementById('stat-no-response').textContent = d.no_response;
+
+  // Update card progress bar widths
+  document.querySelector('.card.c-violet .card-bar span').style.width = 
+    `${Math.min(100, Math.round(d.total_calls / (d.total_contacts || 1) * 100))}%`;
+  document.querySelector('.card.c-green .card-bar span').style.width = 
+    `${Math.min(100, Math.round(d.available / (d.total_calls || 1) * 100))}%`;
+  document.querySelector('.card.c-red .card-bar span').style.width = 
+    `${Math.min(100, Math.round(d.not_available / (d.total_calls || 1) * 100))}%`;
+  document.querySelector('.card.c-amber .card-bar span').style.width = 
+    `${Math.min(100, Math.round(d.no_response / (d.total_calls || 1) * 100))}%`;
+
+  // Update Analytics Tab Stats
+  document.getElementById('ana-contacts').textContent = d.total_contacts;
+  document.getElementById('ana-calls').textContent = d.total_calls;
+  document.getElementById('ana-rate').textContent = `${d.success_rate}%`;
+  
+  const rejectionRate = d.total_calls > 0 ? Math.round((d.not_available / d.total_calls) * 1000) / 10 : 0;
+  const pendingRate = d.total_calls > 0 ? Math.round((d.no_response / d.total_calls) * 1000) / 10 : 0;
+  
+  const rejectionEl = document.querySelector('.stat-row span[style*="color:var(--red)"]');
+  if (rejectionEl) rejectionEl.textContent = `${rejectionRate}%`;
+  
+  const pendingEl = document.querySelector('.stat-row span[style*="color:var(--amber)"]');
+  if (pendingEl) pendingEl.textContent = d.no_response;
+
+  // Update Donut Chart
+  const total = d.total_calls;
+  const avail = d.available;
+  const notAvail = d.not_available;
+  const noResp = d.no_response;
+  const C = 2 * Math.PI * 80; // Circumference
+
+  document.getElementById('donut-total').textContent = total;
+  document.getElementById('legend-avail').textContent = avail;
+  document.getElementById('legend-notavail').textContent = notAvail;
+  document.getElementById('legend-noresp').textContent = noResp;
+
+  const elA = document.getElementById('donut-available');
+  const elN = document.getElementById('donut-not-available');
+  const elR = document.getElementById('donut-no-response');
+
+  if (total === 0) {
+    elA.style.strokeDasharray = `0 ${C}`;
+    elN.style.strokeDasharray = `0 ${C}`;
+    elR.style.strokeDasharray = `0 ${C}`;
+    return;
+  }
+
+  const pA = avail / total;
+  const pN = notAvail / total;
+  const pR = noResp / total;
+
+  elA.style.strokeDasharray = `${pA * C} ${C}`;
+  elN.style.strokeDashoffset = -pA * C;
+  elN.style.strokeDasharray = `${pN * C} ${C}`;
+  elR.style.strokeDashoffset = -(pA + pN) * C;
+  elR.style.strokeDasharray = `${pR * C} ${C}`;
+}
+
+// ===== INITIAL DASHBOARD POPULATION & COUNTER ANIMATION =====
+(function(){
+  const initialStats = {
+    total_contacts: parseInt("{{ contacts|length }}") || 0,
+    total_calls: parseInt("{{ logs|length }}") || 0,
+    available: parseInt("{{ available_logs|length }}") || 0,
+    not_available: parseInt("{{ not_available_logs|length }}") || 0,
+    no_response: parseInt("{{ no_response_logs|length }}") || 0,
+    success_rate: parseFloat("{% if logs|length > 0 %}{{ ((available_logs|length / logs|length) * 100)|round(1) }}{% else %}0{% endif %}") || 0
+  };
+
+  updateDashboardStats(initialStats);
+
+  // Animate numbers on load
+  document.querySelectorAll('.card-value, .stat-val').forEach(el => {
+    if (el.id === 'ana-rate' || el.textContent.includes('%')) return; // skip percentage
+    const target = parseInt(el.textContent) || 0;
+    if (target === 0) return;
+    let current = 0;
+    const step = Math.max(1, Math.ceil(target / 30));
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= target) {
+        current = target;
+        clearInterval(interval);
+      }
+      el.textContent = current;
+    }, 25);
+  });
+})();
+
+// ===== AUTO-REFRESH STATS (every 5 seconds) =====
+setInterval(() => {
+  fetch('/api/stats')
+    .then(r => r.json())
+    .then(d => {
+      updateDashboardStats(d);
+    })
+    .catch(() => {});
+}, 5000);
 </script>
 </body>
 </html>

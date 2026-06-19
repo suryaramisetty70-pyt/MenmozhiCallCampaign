@@ -1,17 +1,72 @@
-from fastapi.responses import FileResponse
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
+from fastapi.responses import FileResponse, RedirectResponse, Response, JSONResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime
+from contextlib import contextmanager
 import pandas as pd
 import sqlite3
-from fastapi.responses import RedirectResponse
-app = FastAPI()
-from fastapi.staticfiles import StaticFiles
+import requests
+import time
+import os
+import json
 
+# --- Pydantic Settings (v1 / v2 compatible) ---
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    try:
+        from pydantic import BaseSettings
+    except ImportError:
+        # Fallback: plain class if neither works
+        class BaseSettings:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+class Settings(BaseSettings):
+    AUTH_ID: str = "SA_OBPZVF0E"
+    AUTH_TOKEN: str = "3wiGGYBhqNDgxKJz72vP5R0YILOuxhsWU7Ka0orDR6GuO2PXtWBcZv6JA7CqJh8S"
+    DATABASE_URL: str = "contacts.db"
+    CALLER_ID: str = "+918065481889"
+    ANSWER_URL: str = "https://menmozhicallcampaign-1.onrender.com/answer"
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+
+app = FastAPI(title="Menmozhi AI Call Campaign System")
+
+# Mount static directories
 app.mount("/audio", StaticFiles(directory="audio"), name="audio")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
+
+
+# --- Startup: Create directories and DB tables ---
+@app.on_event("startup")
+def on_startup():
+    os.makedirs("uploads", exist_ok=True)
+    os.makedirs("reports", exist_ok=True)
+    os.makedirs("audio", exist_ok=True)
+    os.makedirs("static", exist_ok=True)
+
+    from database import init_db
+    init_db(settings.DATABASE_URL)
+    print("[SUCCESS] Application started. All tables and directories ready.")
+
+
+# --- Database Helper ---
+@contextmanager
+def get_db_conn():
+    conn = sqlite3.connect(settings.DATABASE_URL)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 # =========================
@@ -19,95 +74,70 @@ templates = Jinja2Templates(directory="templates")
 # =========================
 @app.get("/")
 def dashboard(request: Request):
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM contacts")
-    contacts = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT * FROM call_logs ORDER BY id DESC"
-    )
-    logs = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC"
-    )
-    available_logs = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC"
-    )
-    not_available_logs = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC"
-    )
-    no_response_logs = cursor.fetchall()
-
-    conn.close()
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        contacts = cursor.execute("SELECT * FROM contacts").fetchall()
+        logs = cursor.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
+        available_logs = cursor.execute("SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC").fetchall()
+        not_available_logs = cursor.execute("SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC").fetchall()
+        no_response_logs = cursor.execute("SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC").fetchall()
 
     return templates.TemplateResponse(
-    request=request,
-    name="index.html",
-    context={
-        "request": request,
-        "contacts": contacts,
-        "logs": logs,
-        "available_logs": available_logs,
-        "not_available_logs": not_available_logs,
-        "no_response_logs": no_response_logs
-    }
-)
+        request=request,
+        name="index.html",
+        context={
+            "request": request,
+            "contacts": contacts,
+            "logs": logs,
+            "available_logs": available_logs,
+            "not_available_logs": not_available_logs,
+            "no_response_logs": no_response_logs
+        }
+    )
+
+
 # =========================
 # UPLOAD EXCEL
 # =========================
 @app.post("/upload")
 async def upload_excel(file: UploadFile = File(...)):
+    try:
+        df = pd.read_excel(file.file, header=None, dtype=str)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Invalid Excel file: {str(e)}"})
 
-    df = pd.read_excel(file.file, header=None)
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
+    contacts_to_insert = []
     inserted = 0
 
     for i in range(len(df)):
-
         row = df.iloc[i]
 
         if len(row) < 2:
             continue
 
         name = str(row[0]).strip()
-        phone = str(row[1]).strip()
+        phone = ''.join(filter(str.isdigit, str(row[1])))
 
-        if name.lower() in ["nan", "name", "a1", "b1"]:
-            continue
-
-        if phone.lower() in ["nan", "phone"]:
+        if name.lower() in ["nan", "name", "a1", "b1", ""]:
             continue
 
         if name == "" or phone == "":
             continue
 
-        cursor.execute(
-            "INSERT INTO contacts (name, phone) VALUES (?, ?)",
-            (name, phone)
-        )
+        # Normalize: keep only last 10 digits
+        if len(phone) > 10:
+            phone = phone[-10:]
 
+        contacts_to_insert.append((name, phone))
         inserted += 1
 
-    conn.commit()
-    conn.close()
+    if contacts_to_insert:
+        with get_db_conn() as conn:
+            conn.executemany("INSERT INTO contacts (name, phone) VALUES (?, ?)", contacts_to_insert)
+            conn.commit()
 
-    print(f"Inserted {inserted} rows")
-
-    return RedirectResponse(
-        url="/",
-        status_code=303
-    )
+    print(f"[SUCCESS] Inserted {inserted} contacts from Excel upload")
+    return RedirectResponse(url="/", status_code=303)
 
 
 # =========================
@@ -115,267 +145,129 @@ async def upload_excel(file: UploadFile = File(...)):
 # =========================
 @app.get("/call/{contact_id}")
 def call_contact(contact_id: int):
-
-    import requests
-    import sqlite3
-
-    AUTH_ID = "SA_OBPZVF0E"
-    AUTH_TOKEN = "qCVCmUy0C2GkXGqo9jCMYFN6AOvx9gQZWf7QvlpUDSWcopIyGGywwnzPEHRziNWA"
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT name, phone FROM contacts WHERE id=?",
-        (contact_id,)
-    )
-
-    contact = cursor.fetchone()
+    with get_db_conn() as conn:
+        contact = conn.execute("SELECT name, phone FROM contacts WHERE id=?", (contact_id,)).fetchone()
 
     if not contact:
-        conn.close()
-        return {"message": "Contact not found"}
+        return RedirectResponse(url="/", status_code=303)
 
-    name = contact[0]
-    phone = contact[1]
+    name = contact["name"]
+    phone = contact["phone"]
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS current_call (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        phone TEXT
-    )
-    """)
-
-    cursor.execute("DELETE FROM current_call")
-
-    cursor.execute("""
-    INSERT INTO current_call
-    (name, phone)
-    VALUES (?, ?)
-    """,
-    (
-        name,
-        phone
-    ))
-
-    conn.commit()
-    conn.close()
-
-    url = f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}/Call"
+    url = f"https://api.vobiz.ai/api/v1/Account/{settings.AUTH_ID}/Call"
 
     headers = {
         "Content-Type": "application/json",
-        "X-Auth-ID": AUTH_ID,
-        "X-Auth-Token": AUTH_TOKEN
+        "X-Auth-ID": settings.AUTH_ID,
+        "X-Auth-Token": settings.AUTH_TOKEN
     }
 
     payload = {
-        "from": "+918065481889",
+        "from": settings.CALLER_ID,
         "to": f"+91{phone}",
-       "answer_url": "https://mods-ringtone-menus-shut.trycloudflare.com?/answer"
+        "answer_url": settings.ANSWER_URL
     }
 
-    response = requests.post(
-        url=url,
-        headers=headers,
-        json=payload,
-        timeout=30
-    )
-
     try:
+        response = requests.post(url=url, headers=headers, json=payload, timeout=30)
         data = response.json()
-    except:
+    except requests.exceptions.JSONDecodeError:
         data = {"response": response.text}
-    return RedirectResponse(
-    url="/",
-    status_code=303
-)
+    except Exception as e:
+        data = {"error": str(e)}
 
-# =========================
-# CALL ALL (SIMULATION)
-# =========================
+    print("VOBIZ API RESPONSE:", data)
 
-@app.get("/call-all")
-def call_all():
+    with get_db_conn() as conn:
+        conn.execute("""
+        INSERT INTO call_api_logs (name, phone, api_response, created_at)
+        VALUES (?, ?, ?, ?)
+        """, (name, phone, str(data), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
-    import requests
-    import sqlite3
-    import time
-    from datetime import datetime
-
-    AUTH_ID = "SA_OBPZVF0E"
-    AUTH_TOKEN = "qCVCmUy0C2GkXGqo9jCMYFN6AOvx9gQZWf7QvlpUDSWcopIyGGywwnzPEHRziNWA"
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT id, name, phone FROM contacts"
-    )
-
-    contacts = cursor.fetchall()
-
-    total = 0
-
-    for contact in contacts:
-
-        name = contact[1]
-        phone = str(contact[2]).strip()
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS current_call (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            phone TEXT
-        )
-        """)
-
-        cursor.execute("DELETE FROM current_call")
-
-        cursor.execute("""
-        INSERT INTO current_call
-        (name, phone)
-        VALUES (?, ?)
-        """,
-        (
-            name,
-            phone
-        ))
-
+        conn.execute("""
+        INSERT INTO call_logs (name, phone, status, call_time)
+        VALUES (?, ?, 'NO RESPONSE', ?)
+        """, (name, phone, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
 
-        url = f"https://api.vobiz.ai/api/v1/Account/{AUTH_ID}/Call"
+    return RedirectResponse(url="/", status_code=303)
+
+
+# =========================
+# CALL ALL (Background Task)
+# =========================
+def run_call_campaign(contacts_data: list):
+    """
+    Runs in a background thread.
+    contacts_data is a list of plain dicts (not sqlite3.Row) for thread safety.
+    """
+    total = 0
+    for contact in contacts_data:
+        name = contact["name"]
+        phone = str(contact["phone"]).strip()
+
+        url = f"https://api.vobiz.ai/api/v1/Account/{settings.AUTH_ID}/Call"
 
         headers = {
             "Content-Type": "application/json",
-            "X-Auth-ID": AUTH_ID,
-            "X-Auth-Token": AUTH_TOKEN
+            "X-Auth-ID": settings.AUTH_ID,
+            "X-Auth-Token": settings.AUTH_TOKEN
         }
 
         payload = {
-            "from": "+918065481889",
+            "from": settings.CALLER_ID,
             "to": f"+91{phone}",
-            "answer_url": "https://mods-ringtone-menus-shut.trycloudflare.com?/answer"
+            "answer_url": settings.ANSWER_URL
         }
 
         try:
-            response = requests.post(
-                url=url,
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
+            print(f"[CALL] Calling {name} at {phone}...")
+            response = requests.post(url=url, headers=headers, json=payload, timeout=30)
 
-            cursor.execute("""
-            INSERT INTO call_logs
-            (name, phone, status, call_time)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                name,
-                phone,
-                "NO RESPONSE",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ))
+            with get_db_conn() as conn:
+                conn.execute("""
+                INSERT INTO call_api_logs (name, phone, api_response, created_at)
+                VALUES (?, ?, ?, ?)
+                """, (name, phone, str(response.text), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
-            conn.commit()
+                conn.execute("""
+                INSERT INTO call_logs (name, phone, status, call_time)
+                VALUES (?, ?, 'NO RESPONSE', ?)
+                """, (name, phone, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                conn.commit()
 
             total += 1
-
         except Exception as e:
-            print("CALL ERROR:", e)
+            print(f"[ERROR] CALL ERROR for {name}: {e}")
 
         time.sleep(20)
 
-    conn.close()
+    print(f"[SUCCESS] Campaign finished. {total} calls initiated.")
 
-    return {
-        "message": f"{total} calls initiated"
-    }
+@app.get("/call-all")
+def call_all(background_tasks: BackgroundTasks):
+    with get_db_conn() as conn:
+        rows = conn.execute("SELECT id, name, phone FROM contacts").fetchall()
+        # Convert to plain dicts for thread safety
+        contacts_data = [{"id": r["id"], "name": r["name"], "phone": r["phone"]} for r in rows]
 
-# =========================
-# TEST LOG
-# =========================
-@app.get("/test-log")
-def test_log():
+    if not contacts_data:
+        return RedirectResponse(url="/", status_code=303)
 
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    INSERT INTO call_logs
-    (name, phone, status, call_time)
-    VALUES (?, ?, ?, ?)
-    """,
-    (
-        "surya",
-        "9182169637",
-        "COMPLETED",
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return {"message": "Log Added"}
+    background_tasks.add_task(run_call_campaign, contacts_data)
+    return RedirectResponse(url="/", status_code=303)
 
 
 # =========================
-# VIEW LOGS
+# ANSWER (Vobiz fetches this)
 # =========================
-@app.get("/logs")
-def get_logs():
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT * FROM call_logs ORDER BY id DESC"
-    )
-
-    data = cursor.fetchall()
-
-    conn.close()
-
-    return {
-        "logs": data
-    }
-@app.get("/export-logs")
-def export_logs():
-
-    conn = sqlite3.connect("contacts.db")
-
-    df = pd.read_sql_query(
-        "SELECT * FROM call_logs",
-        conn
-    )
-
-    conn.close()
-
-    file_name = "call_logs.xlsx"
-
-    df.to_excel(
-        file_name,
-        index=False
-    )
-
-    return FileResponse(
-        path=file_name,
-        filename=file_name
-    )
-from fastapi import Form
-from fastapi.responses import Response
-
-
 @app.api_route("/answer", methods=["GET", "POST"])
 async def answer():
-
-    xml = """
+    xml = f"""
 <Response>
 
 <GetDigits
-action="https://strengths-itunes-find-tub.trycloudflare.com/dtmf"
+action="{settings.ANSWER_URL.replace('/answer', '/dtmf')}"
 method="POST"
 numDigits="1"
 timeout="10">
@@ -404,84 +296,96 @@ No response received.
 
 </Response>
 """
+    return Response(content=xml, media_type="application/xml")
+
+
+# =========================
+# DTMF TEST
+# =========================
+@app.post("/dtmf-test")
+async def dtmf_test(request: Request):
+    form_data = await request.form()
+
+    print("=== DTMF TEST HIT ===")
+    for key, value in form_data.items():
+        print(f"{key} = {value}")
+    print("=====================")
 
     return Response(
-        content=xml,
+        content="""
+<Response>
+    <Speak>
+        Test successful. Thank you.
+    </Speak>
+</Response>
+""",
         media_type="application/xml"
     )
 
 
-from fastapi import Form
-from fastapi.responses import Response
-from datetime import datetime
-import sqlite3
-
-
+# =========================
+# DTMF HANDLER (stores 1=Available, 0=Not Available)
+# =========================
 @app.post("/dtmf")
-async def dtmf_handler(Digits: str = Form(None)):
+async def dtmf_handler(request: Request):
+    form_data = await request.form()
 
-    print("KEY PRESSED =", Digits)
+    print("=== FULL DTMF FORM DATA ===")
+    for key, value in form_data.items():
+        print(f"{key} = {value}")
+    print("===========================")
+
+    Digits = form_data.get("Digits") or form_data.get("digits") or ""
+
+    to_number = (
+        form_data.get("To") or
+        form_data.get("to") or
+        form_data.get("Called") or
+        form_data.get("called") or
+        "").strip()
+
+    to_number = to_number.replace("+91", "").strip()
+
+    print("DIGITS =", Digits)
+    print("TO NUMBER =", to_number)
 
     status = "NO RESPONSE"
-
     if Digits == "1":
         status = "AVAILABLE"
-
     elif Digits == "0":
         status = "NOT AVAILABLE"
 
-    # Get the last called contact
-    conn2 = sqlite3.connect("contacts.db")
-    cursor2 = conn2.cursor()
+    if not to_number:
+        print("[WARNING] DTMF received, but 'To' number is missing from webhook data.")
+    else:
+        with get_db_conn() as conn:
+            result = conn.execute("SELECT name FROM contacts WHERE phone=?", (to_number,)).fetchone()
+            name = result["name"] if result else "Unknown"
 
-    cursor2.execute("""
-    CREATE TABLE IF NOT EXISTS current_call (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        phone TEXT
-    )
-    """)
+            print("NAME =", name)
+            print("PHONE =", to_number)
+            print("STATUS =", status)
 
-    cursor2.execute("""
-    SELECT name, phone
-    FROM current_call
-    ORDER BY id DESC
-    LIMIT 1
-    """)
+            # FIX: Only update the LATEST 'NO RESPONSE' entry for this phone (not all)
+            latest = conn.execute("""
+            SELECT id FROM call_logs
+            WHERE phone=? AND status='NO RESPONSE'
+            ORDER BY id DESC LIMIT 1
+            """, (to_number,)).fetchone()
 
-    contact = cursor2.fetchone()
+            if latest:
+                conn.execute("""
+                UPDATE call_logs SET status=?, call_time=?
+                WHERE id=?
+                """, (status, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), latest["id"]))
+            else:
+                conn.execute("""
+                INSERT INTO call_logs (name, phone, status, call_time)
+                VALUES (?, ?, ?, ?)
+                """, (name, to_number, status, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
-    conn2.close()
-
-    name = "Unknown"
-    phone = "Unknown"
-
-    if contact:
-        name = contact[0]
-        phone = contact[1]
-
-    # Save response to call_logs
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-DELETE FROM call_logs
-WHERE phone=? AND status='NO RESPONSE'
-""", (phone,))
-
-    cursor.execute("""
-    INSERT INTO call_logs
-    (name, phone, status, call_time)
-    VALUES (?, ?, ?, ?)
-    """,
-    (
-        name,
-        phone,
-        status,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ))
-
-    conn.commit()
-    conn.close()
+            conn.commit()
+            print("[SUCCESS] DATABASE SAVED SUCCESSFULLY")
 
     return Response(
         content="""
@@ -494,59 +398,96 @@ WHERE phone=? AND status='NO RESPONSE'
 """,
         media_type="application/xml"
     )
+
+
+# =========================
+# VIEW LOGS
+# =========================
+@app.get("/logs")
+def get_logs():
+    with get_db_conn() as conn:
+        data = conn.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
+    return {"logs": [dict(row) for row in data]}
+
+
+# =========================
+# EXPORT LOGS TO EXCEL
+# =========================
+@app.get("/export-logs")
+def export_logs():
+    with get_db_conn() as conn:
+        df = pd.read_sql_query("SELECT * FROM call_logs", conn)
+
+    os.makedirs("reports", exist_ok=True)
+    file_name = f"reports/call_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    df.to_excel(file_name, index=False)
+
+    return FileResponse(path=file_name, filename=os.path.basename(file_name))
+
+
+# =========================
+# DELETE ENDPOINTS
+# =========================
+@app.get("/delete-contact/{contact_id}")
+def delete_contact(contact_id: int):
+    with get_db_conn() as conn:
+        conn.execute("DELETE FROM contacts WHERE id=?", (contact_id,))
+        conn.commit()
+    return RedirectResponse(url="/", status_code=303)
+
+@app.get("/delete-all-contacts")
+def delete_all_contacts():
+    with get_db_conn() as conn:
+        conn.execute("DELETE FROM contacts")
+        conn.commit()
+    return RedirectResponse(url="/", status_code=303)
+
+@app.get("/delete-all-logs")
+def delete_all_logs():
+    with get_db_conn() as conn:
+        conn.execute("DELETE FROM call_logs")
+        conn.commit()
+    return RedirectResponse(url="/", status_code=303)
+
+
+# =========================
+# API ENDPOINTS
+# =========================
 @app.get("/api/stats")
 def api_stats():
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT COUNT(*) FROM contacts")
-    total_contacts = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM call_logs")
-    total_calls = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM call_logs WHERE status='AVAILABLE'")
-    available = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM call_logs WHERE status='NOT AVAILABLE'")
-    not_available = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM call_logs WHERE status='NO RESPONSE'")
-    no_response = cursor.fetchone()[0]
-
-    conn.close()
+    with get_db_conn() as conn:
+        total_contacts = conn.execute("SELECT COUNT(*) as count FROM contacts").fetchone()["count"]
+        total_calls = conn.execute("SELECT COUNT(*) as count FROM call_logs").fetchone()["count"]
+        available = conn.execute("SELECT COUNT(*) as count FROM call_logs WHERE status='AVAILABLE'").fetchone()["count"]
+        not_available = conn.execute("SELECT COUNT(*) as count FROM call_logs WHERE status='NOT AVAILABLE'").fetchone()["count"]
+        no_response = conn.execute("SELECT COUNT(*) as count FROM call_logs WHERE status='NO RESPONSE'").fetchone()["count"]
 
     return {
         "total_contacts": total_contacts,
         "total_calls": total_calls,
         "available": available,
         "not_available": not_available,
-        "no_response": no_response
+        "no_response": no_response,
+        "success_rate": round((available / total_calls * 100), 1) if total_calls > 0 else 0
     }
+
+
 @app.get("/api/contacts")
 def api_contacts():
-
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM contacts")
-    contacts = cursor.fetchall()
-
-    conn.close()
-
-    return {"contacts": contacts}
+    with get_db_conn() as conn:
+        contacts = conn.execute("SELECT * FROM contacts").fetchall()
+    return {"contacts": [dict(row) for row in contacts]}
 
 
 @app.get("/api/logs")
 def api_logs():
+    with get_db_conn() as conn:
+        logs = conn.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
+    return {"logs": [dict(row) for row in logs]}
 
-    conn = sqlite3.connect("contacts.db")
-    cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM call_logs ORDER BY id DESC")
-    logs = cursor.fetchall()
-
-    conn.close()
-
-    return {"logs": logs}
+@app.get("/api-call-logs")
+def api_call_logs():
+    with get_db_conn() as conn:
+        logs = conn.execute("SELECT * FROM call_api_logs ORDER BY id DESC").fetchall()
+    return {"logs": [dict(row) for row in logs]}
