@@ -345,7 +345,10 @@ async def dtmf_handler(request: Request):
         form_data.get("called") or
         "").strip()
 
-    to_number = to_number.replace("+91", "").strip()
+    # Clean non-digits and keep only last 10 digits for robust matching
+    to_number = ''.join(filter(str.isdigit, to_number))
+    if len(to_number) > 10:
+        to_number = to_number[-10:]
 
     print("DIGITS =", Digits)
     print("TO NUMBER =", to_number)
