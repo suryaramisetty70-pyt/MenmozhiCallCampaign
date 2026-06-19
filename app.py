@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
+# Create required directories before mounting StaticFiles
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("reports", exist_ok=True)
+os.makedirs("audio", exist_ok=True)
+os.makedirs("static", exist_ok=True)
+
 settings = Settings()
 
 app = FastAPI(title="Menmozhi AI Call Campaign System")
@@ -48,11 +54,6 @@ templates = Jinja2Templates(directory="templates")
 # --- Startup: Create directories and DB tables ---
 @app.on_event("startup")
 def on_startup():
-    os.makedirs("uploads", exist_ok=True)
-    os.makedirs("reports", exist_ok=True)
-    os.makedirs("audio", exist_ok=True)
-    os.makedirs("static", exist_ok=True)
-
     from database import init_db
     init_db(settings.DATABASE_URL)
     print("[SUCCESS] Application started. All tables and directories ready.")
