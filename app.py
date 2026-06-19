@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, RedirectResponse, Response, JSONResp
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from contextlib import contextmanager
 import pandas as pd
 import sqlite3
@@ -10,6 +11,12 @@ import requests
 import time
 import os
 import json
+
+def get_current_time_str(format_str="%Y-%m-%d %H:%M:%S"):
+    try:
+        return datetime.now(ZoneInfo("Asia/Kolkata")).strftime(format_str)
+    except Exception:
+        return datetime.now().strftime(format_str)
 
 # --- Pydantic Settings (v1 / v2 compatible) ---
 try:
@@ -183,12 +190,12 @@ def call_contact(contact_id: int):
         conn.execute("""
         INSERT INTO call_api_logs (name, phone, api_response, created_at)
         VALUES (?, ?, ?, ?)
-        """, (name, phone, str(data), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        """, (name, phone, str(data), get_current_time_str()))
 
         conn.execute("""
         INSERT INTO call_logs (name, phone, status, call_time)
         VALUES (?, ?, 'NO RESPONSE', ?)
-        """, (name, phone, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        """, (name, phone, get_current_time_str()))
         conn.commit()
 
     return RedirectResponse(url="/", status_code=303)
@@ -229,12 +236,12 @@ def run_call_campaign(contacts_data: list):
                 conn.execute("""
                 INSERT INTO call_api_logs (name, phone, api_response, created_at)
                 VALUES (?, ?, ?, ?)
-                """, (name, phone, str(response.text), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                """, (name, phone, str(response.text), get_current_time_str()))
 
                 conn.execute("""
                 INSERT INTO call_logs (name, phone, status, call_time)
                 VALUES (?, ?, 'NO RESPONSE', ?)
-                """, (name, phone, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                """, (name, phone, get_current_time_str()))
                 conn.commit()
 
             total += 1
@@ -381,12 +388,12 @@ async def dtmf_handler(request: Request):
                 conn.execute("""
                 UPDATE call_logs SET status=?, call_time=?
                 WHERE id=?
-                """, (status, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), latest["id"]))
+                """, (status, get_current_time_str(), latest["id"]))
             else:
                 conn.execute("""
                 INSERT INTO call_logs (name, phone, status, call_time)
                 VALUES (?, ?, ?, ?)
-                """, (name, to_number, status, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                """, (name, to_number, status, get_current_time_str()))
 
             conn.commit()
             print("[SUCCESS] DATABASE SAVED SUCCESSFULLY")
@@ -423,7 +430,7 @@ def export_logs():
         df = pd.read_sql_query("SELECT * FROM call_logs", conn)
 
     os.makedirs("reports", exist_ok=True)
-    file_name = f"reports/call_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    file_name = f"reports/call_logs_{get_current_time_str('%Y%m%d_%H%M%S')}.xlsx"
     df.to_excel(file_name, index=False)
 
     return FileResponse(path=file_name, filename=os.path.basename(file_name))
