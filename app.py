@@ -90,11 +90,24 @@ def validate_password(password: str) -> bool:
         return False
     return True
 
+import hashlib
+import base64
+
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    if not password:
+        password = ""
+    password_bytes = password.encode('utf-8')
+    sha256_digest = hashlib.sha256(password_bytes).digest()
+    b64_password = base64.b64encode(sha256_digest).decode('ascii')
+    return pwd_context.hash(b64_password)
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password:
+        plain_password = ""
+    password_bytes = plain_password.encode('utf-8')
+    sha256_digest = hashlib.sha256(password_bytes).digest()
+    b64_password = base64.b64encode(sha256_digest).decode('ascii')
+    return pwd_context.verify(b64_password, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
