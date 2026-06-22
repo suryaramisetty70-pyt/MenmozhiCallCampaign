@@ -38,6 +38,7 @@ def init_db(db_path="contacts.db"):
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
+        username TEXT,
         password_hash TEXT NOT NULL,
         created_at TEXT
     )

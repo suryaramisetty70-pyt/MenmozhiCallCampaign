@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     CALLER_ID: str = "+918065481889"
     ANSWER_URL: str = "https://menmozhicallcampaign.onrender.com/answer"
     SMTP_EMAIL: str = "suryaramisetty70@gmail.com"
-    SMTP_PASSWORD: str = "cutjqsnlzkqifqlf"
+    SMTP_PASSWORD: str = "cutj qsnl zkqi fqlf"
     SECRET_KEY: str = "default_unsafe_secret_menmozhi_auth_key"
 
     class Config:
@@ -138,6 +138,13 @@ templates = Jinja2Templates(directory="templates")
 def on_startup():
     from database import init_db
     init_db(settings.DATABASE_URL)
+    with get_db_conn() as conn:
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN username TEXT")
+            conn.commit()
+            print("[SUCCESS] Migrated users table (added username).")
+        except Exception:
+            pass  # Column already exists
     print("[SUCCESS] Application started. All tables and directories ready.")
 
 
@@ -188,10 +195,11 @@ async def api_send_otp(request: Request):
 async def api_signup(request: Request):
     data = await request.json()
     email = data.get("email")
+    username = data.get("username")
     password = data.get("password")
     otp = data.get("otp")
     
-    if not all([email, password, otp]):
+    if not all([email, username, password, otp]):
         return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
         
     with get_db_conn() as conn:
@@ -200,8 +208,8 @@ async def api_signup(request: Request):
             return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
             
         hashed_pw = get_password_hash(password)
-        conn.execute("INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)", 
-                     (email, hashed_pw, get_current_time_str()))
+        conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
+                     (email, username, hashed_pw, get_current_time_str()))
         conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
         conn.commit()
         
