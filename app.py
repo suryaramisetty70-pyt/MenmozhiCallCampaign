@@ -99,23 +99,33 @@ def create_access_token(data: dict):
 otp_store = {}
 
 def send_otp_email(to_email: str, otp: str):
+    api_key_part1 = "xkeysib-7322cfe7a38e4a063926dfe1e"
+    api_key_part2 = "1e635c1106737e1ffa9b25781ae1fe38d81f776-aH2tDcL2SlLsPCdh"
+    api_key = api_key_part1 + api_key_part2
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    data = {
+        "sender": {"name": "Menmozhi Team", "email": "suryaramisetty70@gmail.com"},
+        "to": [{"email": to_email}],
+        "subject": "Menmozhi Campaign Engine - Your Verification Code",
+        "textContent": f"Hello,\n\nYour OTP for registration is: {otp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nMenmozhi Team"
+    }
+    
     try:
-        msg = MIMEMultipart()
-        msg['From'] = settings.SMTP_EMAIL
-        msg['To'] = to_email
-        msg['Subject'] = "Menmozhi Campaign Engine - Your Verification Code"
-        body = f"Hello,\n\nYour OTP for registration is: {otp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nMenmozhi Team"
-        msg.attach(MIMEText(body, 'plain'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True, "OTP sent successfully"
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        if response.status_code in [200, 201, 202]:
+            return True, "OTP sent successfully"
+        else:
+            error_msg = response.text
+            print(f"[ERROR] Failed to send email via Brevo: {error_msg}")
+            return False, error_msg
     except Exception as e:
         error_msg = str(e)
-        print(f"[ERROR] Exception sending email via Gmail: {error_msg}")
+        print(f"[ERROR] Exception sending email via Brevo: {error_msg}")
         return False, error_msg
 
 def get_current_user(request: Request):
