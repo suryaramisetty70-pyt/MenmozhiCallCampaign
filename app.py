@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from contextlib import contextmanager
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 import smtplib
 from email.mime.text import MIMEText
@@ -72,28 +71,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 # =========================
 # AUTHENTICATION LOGIC
 # =========================
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-
-import hashlib
-import base64
-
-def get_password_hash(password):
-    if not password:
-        password = ""
-    password_bytes = password.encode('utf-8')
-    sha256_digest = hashlib.sha256(password_bytes).digest()
-    b64_password = base64.b64encode(sha256_digest).decode('ascii')
-    return pwd_context.hash(b64_password)
-
-def verify_password(plain_password, hashed_password):
-    if not plain_password:
-        plain_password = ""
-    password_bytes = plain_password.encode('utf-8')
-    sha256_digest = hashlib.sha256(password_bytes).digest()
-    b64_password = base64.b64encode(sha256_digest).decode('ascii')
-    return pwd_context.verify(b64_password, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -206,11 +185,6 @@ async def api_send_otp(request: Request):
     email = data.get("email")
     if not email:
         return JSONResponse(status_code=400, content={"status": "error", "message": "Email is required"})
-    
-    with get_db_conn() as conn:
-        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-        if user:
-            return JSONResponse(status_code=400, content={"status": "error", "message": "Email already registered"})
         
     otp = "".join([str(secrets.randbelow(10)) for _ in range(6)])
     expires_at = time.time() + 600  # 10 minutes
@@ -221,64 +195,53 @@ async def api_send_otp(request: Request):
     }
     
     success, msg_detail = send_otp_email(email, otp)
-    if success:
-        return {"status": "success", "message": "OTP sent"}
-    else:
-        return JSONResponse(status_code=500, content={"status": "error", "message": f"Failed to send email: {msg_detail}"})
+    if not success:
+        return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to send OTP email"})
+        
+    return {"status": "success", "message": "OTP sent successfully"}
 
-@app.post("/api/auth/signup")
-async def api_signup(request: Request):
+@app.post("/api/auth/verify-otp")
+async def api_verify_otp(request: Request):
     try:
         data = await request.json()
         email = data.get("email")
-        username = data.get("username")
-        password = data.get("password")
+        username = data.get("username", "User")
         otp = data.get("otp")
         
-        if not all([email, username, password, otp]):
+        if not all([email, otp]):
             return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
             
         otp_data = otp_store.get(email)
         if not otp_data or otp_data["otp"] != otp or time.time() > otp_data["expires_at"]:
             return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
             
-        hashed_pw = get_password_hash(password)
-        try:
-            with get_db_conn() as conn:
-                conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
-                             (email, username, hashed_pw, get_current_time_str()))
-                conn.commit()
-            del otp_store[email]
-        except sqlite3.IntegrityError:
-            return JSONResponse(status_code=400, content={"status": "error", "message": "An account with this email already exists."})
-            
-        return {"status": "success", "message": "Account created successfully"}
-    except Exception as e:
-        import traceback
-        err = traceback.format_exc()
-        print("[SIGNUP ERROR]", err)
-        return JSONResponse(status_code=500, content={"status": "error", "message": f"CRITICAL ERROR: {str(e)}"})
-
-@app.post("/api/auth/login")
-async def api_login(request: Request):
-    try:
-        data = await request.json()
-        email = data.get("email")
-        password = data.get("password")
-            
         with get_db_conn() as conn:
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            if not user or not verify_password(password, user["password_hash"]):
-                return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
+            if not user:
+                # Create new user
+                conn.execute("INSERT INTO users (email, username, created_at) VALUES (?, ?, ?)", 
+                             (email, username, get_current_time_str()))
+                conn.commit()
+                user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
                 
-        access_token = create_access_token(data={"sub": email})
-        response = JSONResponse(content={"status": "success", "message": "Logged in"})
-        response.set_cookie(key="session_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+        # OTP verified, delete it
+        del otp_store[email]
+        
+        access_token = create_access_token(data={"sub": user["email"]})
+        response = JSONResponse(content={"status": "success", "message": "Authenticated successfully"})
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
         return response
     except Exception as e:
         import traceback
         err = traceback.format_exc()
-        print("[LOGIN ERROR]", err)
+        print("[VERIFY ERROR]", err)
         return JSONResponse(status_code=500, content={"status": "error", "message": f"CRITICAL ERROR: {str(e)}"})
 
 @app.get("/logout")

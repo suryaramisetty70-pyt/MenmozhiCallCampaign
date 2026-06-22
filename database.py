@@ -39,7 +39,6 @@ def init_db(db_path="contacts.db"):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
         username TEXT,
-        password_hash TEXT NOT NULL,
         created_at TEXT
     )
     """)
