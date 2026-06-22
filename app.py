@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     AUTH_TOKEN: str = "3wiGGYBhqNDgxKJz72vP5R0YILOuxhsWU7Ka0orDR6GuO2PXtWBcZv6JA7CqJh8S"
     DATABASE_URL: str = "contacts.db"
     CALLER_ID: str = "+918065481889"
-    ANSWER_URL: str = "https://menmozhicallcampaign-1.onrender.com/answer"
+    ANSWER_URL: str = "https://menmozhicallcampaign.onrender.com/answer"
 
     class Config:
         env_file = ".env"
@@ -336,16 +336,25 @@ async def dtmf_test(request: Request):
 # =========================
 @app.post("/dtmf")
 async def dtmf_handler(request: Request):
-    form_data = await request.form()
+    try:
+        form_data = dict(await request.form())
+    except Exception:
+        form_data = {}
 
-    print("=== FULL DTMF FORM DATA ===")
+    if not form_data:
+        try:
+            form_data = await request.json()
+        except Exception:
+            form_data = {}
+
+    print("=== FULL DTMF DATA ===")
     for key, value in form_data.items():
         print(f"{key} = {value}")
     print("===========================")
 
-    Digits = form_data.get("Digits") or form_data.get("digits") or ""
+    Digits = str(form_data.get("Digits") or form_data.get("digits") or "")
 
-    to_number = (
+    to_number = str(
         form_data.get("To") or
         form_data.get("to") or
         form_data.get("Called") or
