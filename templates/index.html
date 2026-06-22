@@ -101,16 +101,23 @@ h1,h2,h3,h4{font-family:'Orbitron',sans-serif;letter-spacing:.04em}
   box-shadow:var(--shadow-card);
 }
 
-/* ===== HEADER ===== */
-.header{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:18px 24px;margin-bottom:20px;position:relative;overflow:hidden;
-}
-.header::after{
-  content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
-  background:var(--grad-aurora);opacity:.4;
-}
-.brand{display:flex;align-items:center;gap:14px}
+<div class="header">
+  <div class="brand">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">MENMOZHI</div>
+      <div class="tagline">Campaign Engine</div>
+    </div>
+  </div>
+  <div style="flex:1; max-width:400px; margin:0 30px;">
+    <div class="search-box" style="width:100%; border-radius:999px; background:var(--glass-2);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; margin-left:12px; color:var(--cyan);"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="universal-search" placeholder="Global search (Name, Phone, Status, Time)..." oninput="universalSearch(this.value)" style="width:100%; border:none; background:transparent; color:white; padding:10px; font-family:'Inter',sans-serif; outline:none; font-size:13px;">
+    </div>
+  </div>
+  <div class="header-right">
 .logo-mark{
   width:50px;height:50px;border-radius:13px;position:relative;
   background:var(--grad-aurora);display:grid;place-items:center;
@@ -497,7 +504,7 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
   <!-- Command Bar -->
   <div class="command-bar glass">
     <span class="cmd-label">⚡ Commands</span>
-    <button class="btn call" onclick="confirmAction('Launch Campaign', 'This will call ALL contacts in your database. Are you sure?', '/call-all')">📞 Launch Campaign</button>
+    <button class="btn call" onclick="confirmAction('Launch Campaign', 'This will call ALL contacts in your database with a 10-second delay between each. Are you sure?', '#', true)">📞 Launch Campaign</button>
     <a href="/export-logs" class="btn export">📥 Export Logs</a>
     <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="file" accept=".xlsx,.xls" required>
@@ -563,8 +570,8 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
             <td class="phone-cell">{{ contact[2] }}</td>
             <td>
               <div class="action-cell">
-                <a class="tbl-btn call-btn" href="/call/{{ contact[0] }}">📞 Call</a>
-                <button class="tbl-btn del-btn" onclick="confirmAction('Delete Contact', 'Remove {{ contact[1] }} from contacts?', '/delete-contact/{{ contact[0] }}')">✕</button>
+                <button class="tbl-btn call-btn" onclick="callContact('{{ contact[0] }}', '{{ contact[1] }}')">📞 Call</button>
+                <button class="tbl-btn del-btn" onclick="confirmAction('Delete Contact', 'Remove {{ contact[1] }} from contacts?', '/delete-contact/{{ contact[0] }}', false)">✕</button>
               </div>
             </td>
           </tr>
@@ -760,10 +767,21 @@ function filterTable(tableId,query){
 }
 
 // ===== CONFIRMATION MODAL =====
-function confirmAction(title,message,url){
+function confirmAction(title,message,url, isAjax=false){
   document.getElementById('modal-title').textContent=title;
   document.getElementById('modal-message').textContent=message;
-  document.getElementById('modal-confirm').href=url;
+  let confirmBtn = document.getElementById('modal-confirm');
+  
+  if (isAjax) {
+      confirmBtn.removeAttribute('href');
+      confirmBtn.onclick = function() {
+          closeModal();
+          launchCampaign();
+      };
+  } else {
+      confirmBtn.href=url;
+      confirmBtn.onclick = null;
+  }
   document.getElementById('confirmModal').classList.add('show');
 }
 function closeModal(){
@@ -772,6 +790,115 @@ function closeModal(){
 document.getElementById('confirmModal').addEventListener('click',function(e){
   if(e.target===this) closeModal();
 });
+
+// ===== UNIVERSAL SEARCH =====
+function universalSearch(query) {
+    const q = query.toLowerCase();
+    const tables = ['contacts-table', 'available-table', 'not-available-table', 'no-response-table', 'logs-table'];
+    tables.forEach(tableId => {
+        const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+        rows.forEach(row => {
+            if (row.querySelector('.empty')) { row.style.display = ''; return; }
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(q) ? '' : 'none';
+        });
+    });
+}
+
+// ===== AJAX CALLS =====
+async function callContact(id, name) {
+    showToast("Initiating call to " + name + "...", "info");
+    try {
+        let res = await fetch("/call/" + id);
+        let data = await res.json();
+        if(data.status === "success") {
+            showToast("Call connected to " + name, "success");
+        } else {
+            showToast("Call failed: " + data.message, "error");
+        }
+    } catch(e) {
+        showToast("Network error initiating call.", "error");
+    }
+}
+
+async function launchCampaign() {
+    showToast("Starting mass campaign (10s delay per call)...", "info");
+    try {
+        let res = await fetch("/call-all");
+        let data = await res.json();
+        if(data.status === "success") {
+            showToast("Campaign running in background!", "success");
+        } else {
+            showToast("Campaign failed to start.", "error");
+        }
+    } catch(e) {
+        showToast("Network error starting campaign.", "error");
+    }
+}
+
+// ===== AUTO-POLLING LOGS =====
+setInterval(async () => {
+    try {
+        let res = await fetch("/api/logs");
+        let data = await res.json();
+        updateTables(data.logs);
+    } catch(e) {
+        // silently fail on polling error
+    }
+}, 3000);
+
+function updateTables(logs) {
+    let availHtml = ''; let notAvailHtml = ''; let noRespHtml = ''; let allLogsHtml = '';
+    let availCount = 0; let notAvailCount = 0; let noRespCount = 0;
+
+    logs.forEach(row => {
+        let statusHtml = '';
+        if (row.status === 'AVAILABLE') {
+            statusHtml = '<span class="chip ok">AVAILABLE</span>';
+            availHtml += `<tr><td class="name-cell">${row.name}</td><td class="phone-cell">${row.phone}</td><td>${statusHtml}</td><td class="time-cell">${row.call_time}</td></tr>`;
+            availCount++;
+        } else if (row.status === 'NOT AVAILABLE') {
+            statusHtml = '<span class="chip error">NOT AVAILABLE</span>';
+            notAvailHtml += `<tr><td class="name-cell">${row.name}</td><td class="phone-cell">${row.phone}</td><td>${statusHtml}</td><td class="time-cell">${row.call_time}</td></tr>`;
+            notAvailCount++;
+        } else {
+            statusHtml = '<span class="chip pending">NO RESPONSE</span>';
+            noRespHtml += `<tr><td class="name-cell">${row.name}</td><td class="phone-cell">${row.phone}</td><td>${statusHtml}</td><td class="time-cell">${row.call_time}</td></tr>`;
+            noRespCount++;
+        }
+        allLogsHtml += `<tr><td>${row.id}</td><td class="name-cell">${row.name}</td><td class="phone-cell">${row.phone}</td><td>${statusHtml}</td><td class="time-cell">${row.call_time}</td></tr>`;
+    });
+
+    // Update table bodies
+    document.querySelector('#available-table tbody').innerHTML = availHtml || '<tr><td colspan="4" class="empty">// No data</td></tr>';
+    document.querySelector('#not-available-table tbody').innerHTML = notAvailHtml || '<tr><td colspan="4" class="empty">// No data</td></tr>';
+    document.querySelector('#no-response-table tbody').innerHTML = noRespHtml || '<tr><td colspan="4" class="empty">// No data</td></tr>';
+    document.querySelector('#logs-table tbody').innerHTML = allLogsHtml || '<tr><td colspan="5" class="empty">// No data</td></tr>';
+
+    // Update counts
+    document.querySelector('#panel-available .count').textContent = availCount;
+    document.querySelector('#panel-not-available .count').textContent = notAvailCount;
+    document.querySelector('#panel-no-response .count').textContent = noRespCount;
+    document.querySelector('#panel-logs .count').textContent = logs.length + ' entries';
+
+    // Update charts & stats
+    document.getElementById('donut-total').textContent = logs.length;
+    document.getElementById('legend-avail').textContent = availCount;
+    document.getElementById('legend-notavail').textContent = notAvailCount;
+    document.getElementById('legend-noresp').textContent = noRespCount;
+    document.getElementById('ana-calls').textContent = logs.length;
+
+    if (logs.length > 0) {
+        document.getElementById('ana-rate').textContent = ((availCount / logs.length) * 100).toFixed(1) + '%';
+        document.querySelector('.stat-row:nth-child(4) .stat-val').textContent = ((notAvailCount / logs.length) * 100).toFixed(1) + '%';
+    }
+
+    // Reapply universal search filter to newly rendered rows if there is a query
+    const searchVal = document.getElementById('universal-search')?.value;
+    if (searchVal) {
+        universalSearch(searchVal);
+    }
+}
 
 // ===== TOAST =====
 function showToast(message,type='success'){

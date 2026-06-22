@@ -157,7 +157,7 @@ def call_contact(contact_id: int):
         contact = conn.execute("SELECT name, phone FROM contacts WHERE id=?", (contact_id,)).fetchone()
 
     if not contact:
-        return RedirectResponse(url="/", status_code=303)
+        return JSONResponse(status_code=404, content={"status": "error", "message": "Contact not found"})
 
     name = contact["name"]
     phone = contact["phone"]
@@ -198,7 +198,7 @@ def call_contact(contact_id: int):
         """, (name, phone, get_current_time_str()))
         conn.commit()
 
-    return RedirectResponse(url="/", status_code=303)
+    return JSONResponse(content={"status": "success", "message": f"Call initiated to {name}"})
 
 
 # =========================
@@ -248,7 +248,7 @@ def run_call_campaign(contacts_data: list):
         except Exception as e:
             print(f"[ERROR] CALL ERROR for {name}: {e}")
 
-        time.sleep(20)
+        time.sleep(10)
 
     print(f"[SUCCESS] Campaign finished. {total} calls initiated.")
 
@@ -260,10 +260,19 @@ def call_all(background_tasks: BackgroundTasks):
         contacts_data = [{"id": r["id"], "name": r["name"], "phone": r["phone"]} for r in rows]
 
     if not contacts_data:
-        return RedirectResponse(url="/", status_code=303)
+        return JSONResponse(status_code=400, content={"status": "error", "message": "No contacts found"})
 
     background_tasks.add_task(run_call_campaign, contacts_data)
-    return RedirectResponse(url="/", status_code=303)
+    return JSONResponse(content={"status": "success", "message": "Call campaign started"})
+
+# =========================
+# POLLING ENDPOINT (AJAX)
+# =========================
+@app.get("/api/logs")
+def api_get_logs():
+    with get_db_conn() as conn:
+        data = conn.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
+    return {"logs": [dict(row) for row in data]}
 
 
 # =========================
