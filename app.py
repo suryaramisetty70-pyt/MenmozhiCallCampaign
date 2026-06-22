@@ -225,7 +225,7 @@ async def api_signup(request: Request):
             if not record or record["otp"] != otp or time.time() > record["expires_at"]:
                 return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
                 
-            hashed_pw = get_password_hash(password)
+            hashed_pw = get_password_hash(password[:72])
             try:
                 conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
                              (email, username, hashed_pw, get_current_time_str()))
@@ -250,7 +250,7 @@ async def api_login(request: Request):
         
         with get_db_conn() as conn:
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            if not user or not verify_password(password, user["password_hash"]):
+            if not user or not verify_password(password[:72], user["password_hash"]):
                 return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
                 
         access_token = create_access_token(data={"sub": email})
