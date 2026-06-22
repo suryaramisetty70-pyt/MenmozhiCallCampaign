@@ -210,46 +210,58 @@ async def api_send_otp(request: Request):
 
 @app.post("/api/auth/signup")
 async def api_signup(request: Request):
-    data = await request.json()
-    email = data.get("email")
-    username = data.get("username")
-    password = data.get("password")
-    otp = data.get("otp")
-    
-    if not all([email, username, password, otp]):
-        return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
+    try:
+        data = await request.json()
+        email = data.get("email")
+        username = data.get("username")
+        password = data.get("password")
+        otp = data.get("otp")
         
-    with get_db_conn() as conn:
-        record = conn.execute("SELECT * FROM otp_verifications WHERE email=?", (email,)).fetchone()
-        if not record or record["otp"] != otp or time.time() > record["expires_at"]:
-            return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
+        if not all([email, username, password, otp]):
+            return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
             
-        hashed_pw = get_password_hash(password)
-        try:
-            conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
-                         (email, username, hashed_pw, get_current_time_str()))
-            conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
-            conn.commit()
-        except sqlite3.IntegrityError:
-            return JSONResponse(status_code=400, content={"status": "error", "message": "An account with this email already exists."})
-        
-    return {"status": "success", "message": "Account created successfully"}
+        with get_db_conn() as conn:
+            record = conn.execute("SELECT * FROM otp_verifications WHERE email=?", (email,)).fetchone()
+            if not record or record["otp"] != otp or time.time() > record["expires_at"]:
+                return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
+                
+            hashed_pw = get_password_hash(password)
+            try:
+                conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
+                             (email, username, hashed_pw, get_current_time_str()))
+                conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
+                conn.commit()
+            except sqlite3.IntegrityError:
+                return JSONResponse(status_code=400, content={"status": "error", "message": "An account with this email already exists."})
+            
+        return {"status": "success", "message": "Account created successfully"}
+    except Exception as e:
+        import traceback
+        err = traceback.format_exc()
+        print("[SIGNUP ERROR]", err)
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"CRITICAL ERROR: {str(e)}"})
 
 @app.post("/api/auth/login")
 async def api_login(request: Request):
-    data = await request.json()
-    email = data.get("email")
-    password = data.get("password")
-    
-    with get_db_conn() as conn:
-        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-        if not user or not verify_password(password, user["password_hash"]):
-            return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
-            
-    access_token = create_access_token(data={"sub": email})
-    response = JSONResponse(content={"status": "success", "message": "Logged in"})
-    response.set_cookie(key="session_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    return response
+    try:
+        data = await request.json()
+        email = data.get("email")
+        password = data.get("password")
+        
+        with get_db_conn() as conn:
+            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+            if not user or not verify_password(password, user["password_hash"]):
+                return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
+                
+        access_token = create_access_token(data={"sub": email})
+        response = JSONResponse(content={"status": "success", "message": "Logged in"})
+        response.set_cookie(key="session_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+        return response
+    except Exception as e:
+        import traceback
+        err = traceback.format_exc()
+        print("[LOGIN ERROR]", err)
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"CRITICAL ERROR: {str(e)}"})
 
 @app.get("/logout")
 def logout():
