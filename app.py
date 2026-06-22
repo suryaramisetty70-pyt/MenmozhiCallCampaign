@@ -83,7 +83,7 @@ def create_access_token(data: dict):
 def send_otp_email(to_email: str, otp: str):
     if not settings.SMTP_EMAIL or not settings.SMTP_PASSWORD:
         print("[WARNING] SMTP not configured. OTP:", otp)
-        return False
+        return False, "SMTP not configured"
     try:
         msg = MIMEMultipart()
         msg['From'] = settings.SMTP_EMAIL
@@ -92,15 +92,15 @@ def send_otp_email(to_email: str, otp: str):
         body = f"Hello,\n\nYour OTP for registration is: {otp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nMenmozhi Team"
         msg.attach(MIMEText(body, 'plain'))
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()
-        return True
+        return True, "OTP sent successfully"
     except Exception as e:
-        print(f"[ERROR] Failed to send email: {e}")
-        return False
+        error_msg = str(e)
+        print(f"[ERROR] Failed to send email: {error_msg}")
+        return False, error_msg
 
 def get_current_user(request: Request):
     token = request.cookies.get("session_token")
@@ -185,11 +185,11 @@ async def api_send_otp(request: Request):
         conn.execute("INSERT OR REPLACE INTO otp_verifications (email, otp, expires_at) VALUES (?, ?, ?)", (email, otp, expires_at))
         conn.commit()
     
-    success = send_otp_email(email, otp)
+    success, msg_detail = send_otp_email(email, otp)
     if success:
         return {"status": "success", "message": "OTP sent"}
     else:
-        return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to send email. Check SMTP settings."})
+        return JSONResponse(status_code=500, content={"status": "error", "message": f"Failed to send email: {msg_detail}"})
 
 @app.post("/api/auth/signup")
 async def api_signup(request: Request):
