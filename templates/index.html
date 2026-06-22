@@ -774,7 +774,8 @@ function confirmAction(title,message,url, isAjax=false){
   
   if (isAjax) {
       confirmBtn.removeAttribute('href');
-      confirmBtn.onclick = function() {
+      confirmBtn.onclick = function(e) {
+          e.preventDefault();
           closeModal();
           launchCampaign();
       };

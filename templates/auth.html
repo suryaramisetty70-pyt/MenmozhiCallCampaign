@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Menmozhi - Authentication</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root {
+  --bg-0:#04060e; --bg-1:#0a1428; --bg-2:#0f1f3d; --cyan:#00e5ff;
+  --violet:#8b5cf6; --green:#10ffb0; --red:#ff5577; --text:#e6f4ff;
+  --muted:#5a7a9e; --border:rgba(0,229,255,.15);
+  --glass:rgba(12,28,58,.65); --glass-2:rgba(8,18,40,.75);
+  --grad-aurora:linear-gradient(135deg,#00e5ff 0%,#8b5cf6 50%,#e879f9 100%);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family:'Inter',sans-serif; color:var(--text); min-height:100vh;
+  background:var(--bg-0); display:grid; place-items:center;
+}
+.bg-grid {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image: linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),
+                    linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+.auth-box {
+  width:100%; max-width:400px; padding:40px; position:relative; z-index:1;
+  background:linear-gradient(145deg,var(--glass),var(--glass-2));
+  backdrop-filter:blur(24px); border:1px solid var(--border);
+  border-radius:24px; box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+.brand { text-align:center; margin-bottom:30px; }
+.logo-mark {
+  width:60px; height:60px; margin:0 auto 16px; border-radius:16px;
+  background:var(--grad-aurora); display:grid; place-items:center;
+  box-shadow:0 0 24px rgba(0,229,255,.4);
+}
+.brand h1 { font-family:'Orbitron',sans-serif; font-size:24px; }
+.brand p { color:var(--muted); font-size:13px; margin-top:4px; }
+
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; font-size:12px; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; }
+.form-group input {
+  width:100%; padding:14px; border-radius:12px; background:rgba(0,0,0,.3);
+  border:1px solid var(--border); color:#fff; font-family:'Inter',sans-serif;
+  outline:none; transition:border .3s;
+}
+.form-group input:focus { border-color:var(--cyan); box-shadow:0 0 10px rgba(0,229,255,.2); }
+
+.btn {
+  width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  font-family:'Orbitron',sans-serif; font-weight:700; font-size:14px;
+  background:var(--grad-aurora); color:#000; transition:all .3s;
+  box-shadow:0 4px 15px rgba(0,229,255,.3); margin-top:10px;
+}
+.btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,229,255,.5); }
+.btn-alt { background:transparent; border:1px solid var(--border); color:var(--cyan); margin-top:10px; box-shadow:none; }
+.btn-alt:hover { background:rgba(0,229,255,.1); box-shadow:none; }
+
+.toggle-text { text-align:center; font-size:13px; margin-top:20px; color:var(--muted); cursor:pointer; }
+.toggle-text span { color:var(--cyan); font-weight:600; }
+
+.view { display:none; }
+.view.active { display:block; animation:fadeIn .4s ease; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="auth-box">
+  <div class="brand">
+    <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" style="width:30px;height:30px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+    <h1>MENMOZHI</h1>
+    <p>Secure Command Center</p>
+  </div>
+
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="view active">
+    <div class="form-group"><label>Email Address</label><input type="email" id="login-email" placeholder="admin@menmozhi.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+    <button class="btn" onclick="login()">Authenticate</button>
+    <div class="toggle-text" onclick="toggleView('view-signup')">Don't have an account? <span>Sign up</span></div>
+  </div>
+
+  <!-- SIGNUP VIEW -->
+  <div id="view-signup" class="view">
+    <div class="form-group"><label>Email Address</label><input type="email" id="signup-email" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Create Password</label><input type="password" id="signup-password" placeholder="••••••••"></div>
+    <button class="btn" onclick="sendOtp()">Send Verification Code</button>
+    <div class="toggle-text" onclick="toggleView('view-login')">Already registered? <span>Log in</span></div>
+  </div>
+
+  <!-- OTP VERIFY VIEW -->
+  <div id="view-otp" class="view">
+    <p style="font-size:13px;color:var(--cyan);text-align:center;margin-bottom:20px;">We sent a 6-digit code to your email.</p>
+    <div class="form-group"><label>Verification Code</label><input type="text" id="signup-otp" placeholder="123456" maxlength="6" style="text-align:center;letter-spacing:4px;font-size:20px;"></div>
+    <button class="btn" onclick="verifySignup()">Create Account</button>
+    <button class="btn btn-alt" onclick="toggleView('view-signup')">Back</button>
+  </div>
+</div>
+
+<script>
+function toggleView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+async function login() {
+    let email = document.getElementById('login-email').value;
+    let pwd = document.getElementById('login-password').value;
+    if(!email || !pwd) return alert("Please fill all fields.");
+    
+    let btn = document.querySelector('#view-login .btn');
+    btn.textContent = "Verifying...";
+    
+    try {
+        let res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, password: pwd})
+        });
+        let data = await res.json();
+        if(res.ok) {
+            window.location.href = "/";
+        } else {
+            alert(data.message || "Invalid credentials.");
+            btn.textContent = "Authenticate";
+        }
+    } catch(e) {
+        alert("Network error.");
+        btn.textContent = "Authenticate";
+    }
+}
+
+async function sendOtp() {
+    let email = document.getElementById('signup-email').value;
+    let pwd = document.getElementById('signup-password').value;
+    if(!email || !pwd) return alert("Please fill all fields.");
+    
+    let btn = document.querySelector('#view-signup .btn');
+    btn.textContent = "Sending Code...";
+    
+    try {
+        let res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email})
+        });
+        let data = await res.json();
+        if(res.ok) {
+            toggleView('view-otp');
+        } else {
+            alert(data.message || "Error sending OTP.");
+        }
+    } catch(e) {
+        alert("Network error.");
+    }
+    btn.textContent = "Send Verification Code";
+}
+
+async function verifySignup() {
+    let email = document.getElementById('signup-email').value;
+    let pwd = document.getElementById('signup-password').value;
+    let otp = document.getElementById('signup-otp').value;
+    
+    if(!otp) return alert("Please enter the OTP.");
+    
+    let btn = document.querySelector('#view-otp .btn');
+    btn.textContent = "Verifying...";
+    
+    try {
+        let res = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, password: pwd, otp: otp})
+        });
+        let data = await res.json();
+        if(res.ok) {
+            alert("Account created successfully! Please log in.");
+            toggleView('view-login');
+        } else {
+            alert(data.message || "Invalid OTP.");
+        }
+    } catch(e) {
+        alert("Network error.");
+    }
+    btn.textContent = "Create Account";
+}
+</script>
+</body>
+</html>

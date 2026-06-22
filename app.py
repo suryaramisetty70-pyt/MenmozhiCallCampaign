@@ -1,10 +1,16 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse, RedirectResponse, Response, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from contextlib import contextmanager
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import secrets
 import pandas as pd
 import sqlite3
 import requests
@@ -37,6 +43,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "contacts.db"
     CALLER_ID: str = "+918065481889"
     ANSWER_URL: str = "https://menmozhicallcampaign.onrender.com/answer"
+    SMTP_EMAIL: str = ""
+    SMTP_PASSWORD: str = ""
+    SECRET_KEY: str = "default_unsafe_secret"
 
     class Config:
         env_file = ".env"
@@ -50,6 +59,72 @@ os.makedirs("static", exist_ok=True)
 settings = Settings()
 
 app = FastAPI(title="Menmozhi AI Call Campaign System")
+
+# =========================
+# AUTHENTICATION LOGIC
+# =========================
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def send_otp_email(to_email: str, otp: str):
+    if not settings.SMTP_EMAIL or not settings.SMTP_PASSWORD:
+        print("[WARNING] SMTP not configured. OTP:", otp)
+        return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = settings.SMTP_EMAIL
+        msg['To'] = to_email
+        msg['Subject'] = "Menmozhi Campaign Engine - Your Verification Code"
+        body = f"Hello,\n\nYour OTP for registration is: {otp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nMenmozhi Team"
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to send email: {e}")
+        return False
+
+def get_current_user(request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        with get_db_conn() as conn:
+            user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        return user
+    except JWTError:
+        return None
+
+def auth_required(request: Request):
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/login"}
+        )
+    return user
 
 # Mount static directories
 app.mount("/audio", StaticFiles(directory="audio"), name="audio")
@@ -78,10 +153,91 @@ def get_db_conn():
 
 
 # =========================
+# AUTHENTICATION ENDPOINTS
+# =========================
+@app.get("/login")
+def login_page(request: Request):
+    if get_current_user(request):
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request=request, name="auth.html", context={})
+
+@app.post("/api/auth/send-otp")
+async def api_send_otp(request: Request):
+    data = await request.json()
+    email = data.get("email")
+    if not email:
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Email is required"})
+    
+    with get_db_conn() as conn:
+        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        if user:
+            return JSONResponse(status_code=400, content={"status": "error", "message": "Email already registered"})
+        
+        otp = "".join([str(secrets.randbelow(10)) for _ in range(6)])
+        expires_at = time.time() + 600  # 10 minutes
+        conn.execute("INSERT OR REPLACE INTO otp_verifications (email, otp, expires_at) VALUES (?, ?, ?)", (email, otp, expires_at))
+        conn.commit()
+    
+    success = send_otp_email(email, otp)
+    if success:
+        return {"status": "success", "message": "OTP sent"}
+    else:
+        return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to send email. Check SMTP settings."})
+
+@app.post("/api/auth/signup")
+async def api_signup(request: Request):
+    data = await request.json()
+    email = data.get("email")
+    password = data.get("password")
+    otp = data.get("otp")
+    
+    if not all([email, password, otp]):
+        return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
+        
+    with get_db_conn() as conn:
+        record = conn.execute("SELECT * FROM otp_verifications WHERE email=?", (email,)).fetchone()
+        if not record or record["otp"] != otp or time.time() > record["expires_at"]:
+            return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
+            
+        hashed_pw = get_password_hash(password)
+        conn.execute("INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)", 
+                     (email, hashed_pw, get_current_time_str()))
+        conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
+        conn.commit()
+        
+    return {"status": "success", "message": "Account created successfully"}
+
+@app.post("/api/auth/login")
+async def api_login(request: Request):
+    data = await request.json()
+    email = data.get("email")
+    password = data.get("password")
+    
+    with get_db_conn() as conn:
+        user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        if not user or not verify_password(password, user["password_hash"]):
+            return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
+            
+    access_token = create_access_token(data={"sub": email})
+    response = JSONResponse(content={"status": "success", "message": "Logged in"})
+    response.set_cookie(key="session_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    return response
+
+@app.get("/logout")
+def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("session_token")
+    return response
+
+
+# =========================
 # DASHBOARD PAGE
 # =========================
 @app.get("/")
 def dashboard(request: Request):
+    if not get_current_user(request):
+        return RedirectResponse(url="/login", status_code=303)
+        
     with get_db_conn() as conn:
         cursor = conn.cursor()
         contacts = cursor.execute("SELECT * FROM contacts").fetchall()
@@ -108,7 +264,7 @@ def dashboard(request: Request):
 # UPLOAD EXCEL
 # =========================
 @app.post("/upload")
-async def upload_excel(file: UploadFile = File(...)):
+async def upload_excel(file: UploadFile = File(...), user: dict = Depends(auth_required)):
     try:
         df = pd.read_excel(file.file, header=None, dtype=str)
     except Exception as e:
@@ -152,7 +308,7 @@ async def upload_excel(file: UploadFile = File(...)):
 # SINGLE CALL
 # =========================
 @app.get("/call/{contact_id}")
-def call_contact(contact_id: int):
+def call_contact(contact_id: int, user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         contact = conn.execute("SELECT name, phone FROM contacts WHERE id=?", (contact_id,)).fetchone()
 
@@ -253,7 +409,7 @@ def run_call_campaign(contacts_data: list):
     print(f"[SUCCESS] Campaign finished. {total} calls initiated.")
 
 @app.get("/call-all")
-def call_all(background_tasks: BackgroundTasks):
+def call_all(background_tasks: BackgroundTasks, user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         rows = conn.execute("SELECT id, name, phone FROM contacts").fetchall()
         # Convert to plain dicts for thread safety
@@ -269,7 +425,7 @@ def call_all(background_tasks: BackgroundTasks):
 # POLLING ENDPOINT (AJAX)
 # =========================
 @app.get("/api/logs")
-def api_get_logs():
+def api_get_logs(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         data = conn.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
     return {"logs": [dict(row) for row in data]}
@@ -433,7 +589,7 @@ async def dtmf_handler(request: Request):
 # VIEW LOGS
 # =========================
 @app.get("/logs")
-def get_logs():
+def get_logs(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         data = conn.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
     return {"logs": [dict(row) for row in data]}
@@ -443,7 +599,7 @@ def get_logs():
 # EXPORT LOGS TO EXCEL
 # =========================
 @app.get("/export-logs")
-def export_logs():
+def export_logs(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         df = pd.read_sql_query("SELECT * FROM call_logs", conn)
 
@@ -458,21 +614,21 @@ def export_logs():
 # DELETE ENDPOINTS
 # =========================
 @app.get("/delete-contact/{contact_id}")
-def delete_contact(contact_id: int):
+def delete_contact(contact_id: int, user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         conn.execute("DELETE FROM contacts WHERE id=?", (contact_id,))
         conn.commit()
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/delete-all-contacts")
-def delete_all_contacts():
+def delete_all_contacts(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         conn.execute("DELETE FROM contacts")
         conn.commit()
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/delete-all-logs")
-def delete_all_logs():
+def delete_all_logs(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         conn.execute("DELETE FROM call_logs")
         conn.commit()
@@ -483,7 +639,7 @@ def delete_all_logs():
 # API ENDPOINTS
 # =========================
 @app.get("/api/stats")
-def api_stats():
+def api_stats(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         total_contacts = conn.execute("SELECT COUNT(*) as count FROM contacts").fetchone()["count"]
         total_calls = conn.execute("SELECT COUNT(*) as count FROM call_logs").fetchone()["count"]
@@ -502,7 +658,7 @@ def api_stats():
 
 
 @app.get("/api/contacts")
-def api_contacts():
+def api_contacts(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         contacts = conn.execute("SELECT * FROM contacts").fetchall()
     return {"contacts": [dict(row) for row in contacts]}
@@ -516,7 +672,7 @@ def api_logs():
 
 
 @app.get("/api-call-logs")
-def api_call_logs():
+def api_call_logs(user: dict = Depends(auth_required)):
     with get_db_conn() as conn:
         logs = conn.execute("SELECT * FROM call_api_logs ORDER BY id DESC").fetchall()
     return {"logs": [dict(row) for row in logs]}
