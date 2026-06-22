@@ -43,9 +43,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "contacts.db"
     CALLER_ID: str = "+918065481889"
     ANSWER_URL: str = "https://menmozhicallcampaign.onrender.com/answer"
-    SMTP_EMAIL: str = ""
-    SMTP_PASSWORD: str = ""
-    SECRET_KEY: str = "default_unsafe_secret"
+    SMTP_EMAIL: str = "suryaramisetty70@gmail.com"
+    SMTP_PASSWORD: str = "cutjqsnlzkqifqlf"
+    SECRET_KEY: str = "default_unsafe_secret_menmozhi_auth_key"
 
     class Config:
         env_file = ".env"
