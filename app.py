@@ -230,8 +230,8 @@ async def api_verify_otp(request: Request):
         access_token = create_access_token(data={"sub": user["email"]})
         response = JSONResponse(content={"status": "success", "message": "Authenticated successfully"})
         response.set_cookie(
-            key="access_token",
-            value=f"Bearer {access_token}",
+            key="session_token",
+            value=access_token,
             httponly=True,
             secure=True,
             samesite="lax",
