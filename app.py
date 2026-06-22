@@ -77,17 +77,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 def get_password_hash(password):
-    if not password:
-        password = ""
-    # Safe 71-byte truncation for bcrypt (leaving 1 byte for null terminator)
-    safe_password = password.encode('utf-8')[:71].decode('utf-8', 'ignore')
-    return pwd_context.hash(safe_password)
+    return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
-    if not plain_password:
-        plain_password = ""
-    safe_password = plain_password.encode('utf-8')[:71].decode('utf-8', 'ignore')
-    return pwd_context.verify(safe_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -232,6 +225,9 @@ async def api_signup(request: Request):
         if not all([email, username, password, otp]):
             return JSONResponse(status_code=400, content={"status": "error", "message": "Missing fields"})
             
+        if len(password.encode('utf-8')) > 71:
+            return JSONResponse(status_code=400, content={"status": "error", "message": "Password is too long. Please choose a shorter password (max 71 characters)."})
+            
         otp_data = otp_store.get(email)
         if not otp_data or otp_data["otp"] != otp or time.time() > otp_data["expires_at"]:
             return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
@@ -259,7 +255,9 @@ async def api_login(request: Request):
         data = await request.json()
         email = data.get("email")
         password = data.get("password")
-        
+        if len(password.encode('utf-8')) > 71:
+            return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
+            
         with get_db_conn() as conn:
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
             if not user or not verify_password(password, user["password_hash"]):
