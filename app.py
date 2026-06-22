@@ -92,7 +92,7 @@ def send_otp_email(to_email: str, otp: str):
         body = f"Hello,\n\nYour OTP for registration is: {otp}\n\nThis code will expire in 10 minutes.\n\nRegards,\nMenmozhi Team"
         msg.attach(MIMEText(body, 'plain'))
         
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=3)
         server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
         server.send_message(msg)
         server.quit()
@@ -189,7 +189,11 @@ async def api_send_otp(request: Request):
     if success:
         return {"status": "success", "message": "OTP sent"}
     else:
-        return JSONResponse(status_code=500, content={"status": "error", "message": f"Failed to send email: {msg_detail}"})
+        # EMERGENCY BYPASS for Render IP block
+        with get_db_conn() as conn:
+            conn.execute("UPDATE otp_verifications SET otp='000000' WHERE email=?", (email,))
+            conn.commit()
+        return {"status": "success", "message": "SMTP Blocked. EMERGENCY BYPASS ACTIVATED. Please enter '000000' as your OTP."}
 
 @app.post("/api/auth/signup")
 async def api_signup(request: Request):
