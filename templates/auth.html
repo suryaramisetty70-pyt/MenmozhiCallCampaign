@@ -77,18 +77,28 @@ body {
     <p>Secure Command Center</p>
   </div>
 
-  <!-- SINGLE PASSWORDLESS VIEW -->
-  <div id="view-email" class="view active">
-    <div class="form-group"><label>Full Name (Optional)</label><input type="text" id="auth-username" placeholder="John Doe"></div>
-    <div class="form-group"><label>Email Address</label><input type="email" id="auth-email" placeholder="you@example.com"></div>
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="view active">
+    <div class="form-group"><label>Email Address</label><input type="email" id="login-email" placeholder="admin@menmozhi.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••" maxlength="12"></div>
+    <button class="btn" onclick="login()">Authenticate</button>
+    <div class="toggle-text" onclick="toggleView('view-signup')">Don't have an account? <span>Sign up</span></div>
+  </div>
+
+  <!-- SIGNUP VIEW -->
+  <div id="view-signup" class="view">
+    <div class="form-group"><label>Full Name</label><input type="text" id="signup-username" placeholder="John Doe"></div>
+    <div class="form-group"><label>Email Address</label><input type="email" id="signup-email" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Create Password</label><input type="password" id="signup-password" placeholder="Max 12 chars, 1 uppercase, 1 special" maxlength="12"></div>
     <button class="btn" onclick="sendOtp()">Send Verification Code</button>
+    <div class="toggle-text" onclick="toggleView('view-login')">Already registered? <span>Log in</span></div>
   </div>
 
   <!-- VERIFY OTP VIEW -->
   <div id="view-otp" class="view">
-    <div class="form-group"><label>6-Digit Code</label><input type="text" id="auth-otp" placeholder="000000" maxlength="6"></div>
-    <button class="btn" onclick="verifyOtp()">Authenticate</button>
-    <div class="toggle-text" onclick="toggleView('view-email')">Didn't receive it? <span>Go back</span></div>
+    <div class="form-group"><label>6-Digit Code</label><input type="text" id="signup-otp" placeholder="000000" maxlength="6"></div>
+    <button class="btn" onclick="verifySignup()">Create Account</button>
+    <div class="toggle-text" onclick="toggleView('view-signup')">Didn't receive it? <span>Go back</span></div>
   </div>
 </div>
 
@@ -98,12 +108,41 @@ function toggleView(viewId) {
     document.getElementById(viewId).classList.add('active');
 }
 
+async function login() {
+    let email = document.getElementById('login-email').value;
+    let pwd = document.getElementById('login-password').value;
+    
+    if(!email || !pwd) return alert("Please fill in all fields.");
+    
+    let btn = document.querySelector('#view-login .btn');
+    btn.textContent = "Authenticating...";
+    
+    try {
+        let res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, password: pwd})
+        });
+        let data = await res.json();
+        if(res.ok) {
+            window.location.href = '/';
+        } else {
+            alert(data.message || "Login failed.");
+        }
+    } catch(e) {
+        alert("Network error.");
+    }
+    btn.textContent = "Authenticate";
+}
+
 async function sendOtp() {
-    let email = document.getElementById('auth-email').value;
+    let username = document.getElementById('signup-username').value;
+    let email = document.getElementById('signup-email').value;
+    let pwd = document.getElementById('signup-password').value;
     
-    if(!email) return alert("Please enter your email.");
+    if(!email || !pwd || !username) return alert("Please fill all fields.");
     
-    let btn = document.querySelector('#view-email .btn');
+    let btn = document.querySelector('#view-signup .btn');
     btn.textContent = "Sending...";
     
     try {
@@ -124,10 +163,11 @@ async function sendOtp() {
     btn.textContent = "Send Verification Code";
 }
 
-async function verifyOtp() {
-    let username = document.getElementById('auth-username').value;
-    let email = document.getElementById('auth-email').value;
-    let otp = document.getElementById('auth-otp').value;
+async function verifySignup() {
+    let username = document.getElementById('signup-username').value;
+    let email = document.getElementById('signup-email').value;
+    let pwd = document.getElementById('signup-password').value;
+    let otp = document.getElementById('signup-otp').value;
     
     if(!otp) return alert("Please enter the OTP.");
     
@@ -135,21 +175,22 @@ async function verifyOtp() {
     btn.textContent = "Verifying...";
     
     try {
-        let res = await fetch('/api/auth/verify-otp', {
+        let res = await fetch('/api/auth/signup', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email: email, username: username, otp: otp})
+            body: JSON.stringify({email: email, username: username, password: pwd, otp: otp})
         });
         let data = await res.json();
         if(res.ok) {
-            window.location.href = '/';
+            alert("Account created successfully! Please log in.");
+            toggleView('view-login');
         } else {
-            alert(data.message || "Invalid OTP.");
+            alert(data.message || "Signup failed.");
         }
     } catch(e) {
         alert("Network error.");
     }
-    btn.textContent = "Authenticate";
+    btn.textContent = "Create Account";
 }
 </script>
 </body>
