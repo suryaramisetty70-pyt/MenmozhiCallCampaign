@@ -77,10 +77,17 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    if not password:
+        password = ""
+    # Safe 72-byte truncation for bcrypt
+    safe_password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    return pwd_context.hash(safe_password)
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password:
+        plain_password = ""
+    safe_password = plain_password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    return pwd_context.verify(safe_password, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -225,7 +232,7 @@ async def api_signup(request: Request):
             if not record or record["otp"] != otp or time.time() > record["expires_at"]:
                 return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
                 
-            hashed_pw = get_password_hash(password[:72])
+            hashed_pw = get_password_hash(password)
             try:
                 conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
                              (email, username, hashed_pw, get_current_time_str()))
@@ -250,7 +257,7 @@ async def api_login(request: Request):
         
         with get_db_conn() as conn:
             user = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-            if not user or not verify_password(password[:72], user["password_hash"]):
+            if not user or not verify_password(password, user["password_hash"]):
                 return JSONResponse(status_code=401, content={"status": "error", "message": "Invalid credentials"})
                 
         access_token = create_access_token(data={"sub": email})
