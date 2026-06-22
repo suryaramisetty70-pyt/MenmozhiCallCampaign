@@ -216,10 +216,13 @@ async def api_signup(request: Request):
             return JSONResponse(status_code=400, content={"status": "error", "message": "Invalid or expired OTP"})
             
         hashed_pw = get_password_hash(password)
-        conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
-                     (email, username, hashed_pw, get_current_time_str()))
-        conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
-        conn.commit()
+        try:
+            conn.execute("INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, ?)", 
+                         (email, username, hashed_pw, get_current_time_str()))
+            conn.execute("DELETE FROM otp_verifications WHERE email=?", (email,))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            return JSONResponse(status_code=400, content={"status": "error", "message": "An account with this email already exists."})
         
     return {"status": "success", "message": "Account created successfully"}
 
