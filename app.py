@@ -58,7 +58,16 @@ os.makedirs("static", exist_ok=True)
 
 settings = Settings()
 
+from fastapi.responses import JSONResponse
+
 app = FastAPI(title="Menmozhi AI Call Campaign System")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_detail = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print(error_detail)
+    return JSONResponse(status_code=500, content={"status": "error", "message": f"Server Error: {str(exc)}"})
 
 # =========================
 # AUTHENTICATION LOGIC
