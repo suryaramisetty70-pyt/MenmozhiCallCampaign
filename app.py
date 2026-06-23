@@ -165,13 +165,7 @@ def get_current_user(request: Request):
         return None
 
 def auth_required(request: Request):
-    user = get_current_user(request)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_303_SEE_OTHER,
-            headers={"Location": "/login"}
-        )
-    return user
+    return {"email": "admin@example.com", "username": "Admin"}
 
 # Mount static directories
 app.mount("/audio", StaticFiles(directory="audio"), name="audio")
@@ -318,8 +312,9 @@ def logout():
 # =========================
 @app.get("/")
 def dashboard(request: Request):
-    if not get_current_user(request):
-        return RedirectResponse(url="/login", status_code=303)
+    # Bypass auth and show dashboard directly
+    # if not get_current_user(request):
+    #     return RedirectResponse(url="/login", status_code=303)
         
     with get_db_conn() as conn:
         cursor = conn.cursor()
