@@ -5,8 +5,7 @@ pandas
 openpyxl
 requests
 pydantic-settings
-passlib[bcrypt]
-python-jose[cryptography]
 python-multipart
-pyotp==2.9.0
-email-validator==2.1.0
+passlib
+bcrypt
+PyJWT
