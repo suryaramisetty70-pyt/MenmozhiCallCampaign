@@ -6,6 +6,15 @@ def init_db(db_path="contacts.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    # MIGRATION: Check if old users table exists without first_name
+    try:
+        cursor.execute("SELECT first_name FROM users LIMIT 1")
+    except sqlite3.OperationalError:
+        # If it fails, the table either doesn't exist or is the old schema.
+        # Drop the old table so it can be recreated correctly.
+        cursor.execute("DROP TABLE IF EXISTS users")
+
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS contacts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
