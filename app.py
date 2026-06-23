@@ -172,7 +172,7 @@ async def flash_middleware(request: Request, call_next):
 def login_page(request: Request):
     if get_current_user(request):
         return RedirectResponse(url="/", status_code=303)
-    response = templates.TemplateResponse("login.html", {"request": request})
+    response = templates.TemplateResponse(request=request, name="login.html", context={"request": request})
     clear_flash(response)
     return response
 
@@ -181,7 +181,7 @@ async def login(request: Request, username_or_email: str = Form(""), password: s
     username_or_email = username_or_email.strip().lower()
     
     if not username_or_email or not password:
-        response = templates.TemplateResponse("login.html", {"request": request})
+        response = templates.TemplateResponse(request=request, name="login.html", context={"request": request})
         set_flash(response, "Please fill in all fields.", "danger")
         return response
 
@@ -189,13 +189,13 @@ async def login(request: Request, username_or_email: str = Form(""), password: s
         user = conn.execute("SELECT * FROM users WHERE lower(username)=? OR lower(email)=?", (username_or_email, username_or_email)).fetchone()
 
     if not user:
-        response = templates.TemplateResponse("login.html", {"request": request})
+        response = templates.TemplateResponse(request=request, name="login.html", context={"request": request})
         set_flash(response, "Invalid credentials. Please check and try again.", "danger")
         return response
 
     locked, lock_msg = check_account_lockout(user)
     if locked:
-        response = templates.TemplateResponse("login.html", {"request": request})
+        response = templates.TemplateResponse(request=request, name="login.html", context={"request": request})
         set_flash(response, lock_msg, "warning")
         return response
 
@@ -226,7 +226,7 @@ async def login(request: Request, username_or_email: str = Form(""), password: s
                 msg = f"Invalid credentials. {5 - attempts} attempts remaining."
             conn.commit()
             
-        response = templates.TemplateResponse("login.html", {"request": request})
+        response = templates.TemplateResponse(request=request, name="login.html", context={"request": request})
         set_flash(response, msg, "danger")
         return response
 
@@ -234,7 +234,7 @@ async def login(request: Request, username_or_email: str = Form(""), password: s
 def signup_page(request: Request):
     if get_current_user(request):
         return RedirectResponse(url="/", status_code=303)
-    response = templates.TemplateResponse("signup.html", {"request": request})
+    response = templates.TemplateResponse(request=request, name="signup.html", context={"request": request})
     clear_flash(response)
     return response
 
@@ -265,7 +265,7 @@ async def signup(request: Request, username: str = Form(""), first_name: str = F
             errors.append("Email already registered")
 
     if errors:
-        response = templates.TemplateResponse("signup.html", {"request": request})
+        response = templates.TemplateResponse(request=request, name="signup.html", context={"request": request})
         set_flash(response, " | ".join(errors), "danger")
         return response
 
@@ -296,7 +296,7 @@ async def signup(request: Request, username: str = Form(""), first_name: str = F
 
 @app.get("/verify-otp/{email}")
 def verify_otp_page(request: Request, email: str):
-    response = templates.TemplateResponse("verify_otp.html", {"request": request, "email": email})
+    response = templates.TemplateResponse(request=request, name="verify_otp.html", context={"request": request, "email": email})
     clear_flash(response)
     return response
 
@@ -322,13 +322,13 @@ async def verify_otp(request: Request, email: str, otp: str = Form("")):
         set_flash(response, "Email verified successfully! You can now login.", "success")
         return response
     else:
-        response = templates.TemplateResponse("verify_otp.html", {"request": request, "email": email})
+        response = templates.TemplateResponse(request=request, name="verify_otp.html", context={"request": request, "email": email})
         set_flash(response, "Invalid OTP. Please try again.", "danger")
         return response
 
 @app.get("/forgot-password")
 def forgot_password_page(request: Request):
-    response = templates.TemplateResponse("forgot_password.html", {"request": request})
+    response = templates.TemplateResponse(request=request, name="forgot_password.html", context={"request": request})
     clear_flash(response)
     return response
 
@@ -361,7 +361,7 @@ def reset_password_page(request: Request, token: str):
         response = RedirectResponse(url="/forgot-password", status_code=303)
         set_flash(response, "Reset link has expired or is invalid.", "danger")
         return response
-    response = templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+    response = templates.TemplateResponse(request=request, name="reset_password.html", context={"request": request, "token": token})
     clear_flash(response)
     return response
 
@@ -376,7 +376,7 @@ async def reset_password(request: Request, token: str, password: str = Form(""),
 
     password_valid, password_msg = validate_password_strength(password)
     if not password_valid or password != confirm_password:
-        response = templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+        response = templates.TemplateResponse(request=request, name="reset_password.html", context={"request": request, "token": token})
         set_flash(response, password_msg if not password_valid else "Passwords do not match.", "danger")
         return response
 
