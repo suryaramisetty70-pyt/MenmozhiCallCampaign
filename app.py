@@ -41,6 +41,7 @@ from urllib.parse import quote, unquote
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from auth_utils import get_current_user_id
 from app_auth import router as auth_router
+from app_ai import ai_router
 
 security = HTTPBearer(auto_error=False)
 
@@ -53,6 +54,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     return user_id
 
 app.include_router(auth_router)
+app.include_router(ai_router)
 
 @app.get("/api/me")
 def api_me(user_id: int = Depends(get_current_user)):
@@ -141,7 +143,8 @@ def dashboard(request: Request):
 @app.post("/upload")
 async def upload_excel(file: UploadFile = File(...)):
     try:
-        df = pd.read_excel(file.file, header=None, dtype=str)
+        df = pd.read_excel(file.file, header=None).fillna("")
+        df = df.astype(str)
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"Invalid Excel file: {str(e)}"})
     contacts_to_insert = []
@@ -153,10 +156,11 @@ async def upload_excel(file: UploadFile = File(...)):
         if name.lower() in ["nan", "name", "a1", "b1", ""]: continue
         if name == "" or phone == "": continue
         if len(phone) > 10: phone = phone[-10:]
+        if len(phone) < 10: continue
         contacts_to_insert.append((name, phone))
     if contacts_to_insert:
         with get_db_conn() as conn:
-            conn.executemany("INSERT INTO contacts (name, phone) VALUES (?, ?)", contacts_to_insert)
+            conn.executemany("INSERT OR IGNORE INTO contacts (name, phone) VALUES (?, ?)", contacts_to_insert)
             conn.commit()
     return RedirectResponse(url="/", status_code=303)
 
@@ -217,9 +221,13 @@ def call_all(background_tasks: BackgroundTasks):
 # ANSWER (Vobiz fetches this)
 # =========================
 @app.api_route("/answer", methods=["GET", "POST"])
-async def answer():
+async def answer(request: Request):
+    try:
+        dtmf_url = str(request.url_for("dtmf_handler")).replace("http://", "https://")
+    except:
+        dtmf_url = settings.ANSWER_URL.replace('/answer', '/dtmf')
     xml = f"""<Response>
-<GetDigits action="{settings.ANSWER_URL.replace('/answer', '/dtmf')}" method="POST" numDigits="1" timeout="10">
+<GetDigits action="{dtmf_url}" method="POST" numDigits="1" timeout="10">
 <Speak>Hello. This is Menmozhi Technologies. If you are available, please press 1. If not, press 0.</Speak>
 </GetDigits>
 <Speak>No response received.</Speak>

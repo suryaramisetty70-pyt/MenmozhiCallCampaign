@@ -643,6 +643,7 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
   <button class="tab-btn" data-tab="not-available" id="tab-not-available">❌ Not Available <span class="badge">{{ not_available_logs|length }}</span></button>
   <button class="tab-btn" data-tab="no-response" id="tab-no-response">📵 No Response <span class="badge">{{ no_response_logs|length }}</span></button>
   <button class="tab-btn" data-tab="logs" id="tab-logs">📜 All Logs <span class="badge">{{ logs|length }}</span></button>
+  <button class="tab-btn" data-tab="ai-scripts" id="tab-ai-scripts">✨ AI Scripts</button>
 </nav>
 
 <!-- ===== TAB: DASHBOARD ===== -->
@@ -880,6 +881,39 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
 
 <!-- ===== TOAST CONTAINER ===== -->
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== TAB: AI SCRIPTS ===== -->
+<div class="tab-content" id="panel-ai-scripts">
+  <div class="glass" style="padding:24px; margin-bottom:20px;">
+    <h2 style="font-size:16px; color:var(--cyan); margin-bottom:12px;">✨ AI Voice Script Generator</h2>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Type a prompt to automatically generate a professional voice script for your outbound calls. The AI will make it perfectly tailored for a robotic or AI voice engine.</p>
+    <div style="display:flex; gap:10px;">
+      <input type="text" id="ai-script-prompt" placeholder="E.g., Write a 20-second sales pitch for an IT consulting company..." style="flex:1; background:var(--bg-2); border:1px solid var(--border); color:#fff; padding:12px; border-radius:var(--radius-sm); font-family:'Inter', sans-serif; outline:none;">
+      <button class="btn call" onclick="generateAIScript()" id="ai-gen-btn">Generate Script</button>
+    </div>
+    <div id="ai-script-result" style="display:none; margin-top:20px; padding:16px; background:rgba(0,229,255,0.05); border:1px solid var(--cyan-dim); border-radius:var(--radius-sm); font-family:'Inter', sans-serif; font-size:14px; color:var(--text); line-height:1.6;">
+    </div>
+  </div>
+</div>
+
+<!-- ===== AI CHAT WIDGET ===== -->
+<div id="ai-chat-widget" style="position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; background:var(--grad-aurora); cursor:pointer; box-shadow:0 0 20px rgba(0,229,255,0.4); display:flex; align-items:center; justify-content:center; z-index:100; transition:var(--transition);" onclick="toggleChat()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:28px; height:28px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</div>
+
+<div id="ai-chat-box" class="glass" style="position:fixed; bottom:100px; right:30px; width:350px; height:450px; display:none; flex-direction:column; z-index:100; border-radius:var(--radius); overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.8);">
+  <div style="background:var(--grad-aurora); padding:16px; display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="color:#fff; font-size:14px; margin:0;">AI Campaign Assistant</h3>
+    <button onclick="toggleChat()" style="background:transparent; border:none; color:#fff; cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div id="chat-messages" style="flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:13px;">
+    <div style="align-self:flex-start; background:var(--bg-2); padding:10px 14px; border-radius:12px; border-bottom-left-radius:2px; max-width:85%; color:var(--text-secondary);">Hi! I'm your AI Assistant. Ask me anything about your current campaign stats!</div>
+  </div>
+  <div style="padding:12px; border-top:1px solid var(--border); display:flex; gap:8px;">
+    <input type="text" id="chat-input" placeholder="Ask about success rates..." style="flex:1; background:var(--bg-2); border:1px solid var(--border); color:#fff; padding:10px; border-radius:var(--radius-sm); outline:none;" onkeypress="if(event.key==='Enter') sendChatMessage()">
+    <button onclick="sendChatMessage()" style="background:var(--cyan-dim); border:1px solid var(--cyan); color:var(--cyan); border-radius:var(--radius-sm); padding:0 12px; cursor:pointer;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+  </div>
+</div>
 
 <script>
 // ===== LIVE CLOCK =====
@@ -1288,6 +1322,77 @@ async function doVerifyOTP() {
     document.getElementById('auth-error-msg').textContent = 'Network error';
     document.getElementById('auth-error-msg').style.display = 'block';
   }
+}
+
+function toggleChat() {
+  const box = document.getElementById('ai-chat-box');
+  box.style.display = box.style.display === 'none' || box.style.display === '' ? 'flex' : 'none';
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  
+  const messages = document.getElementById('chat-messages');
+  // Add user message
+  messages.innerHTML += `<div style="align-self:flex-end; background:var(--grad-aurora); color:#fff; padding:10px 14px; border-radius:12px; border-bottom-right-radius:2px; max-width:85%;">${msg}</div>`;
+  input.value = '';
+  messages.scrollTop = messages.scrollHeight;
+  
+  // Add loading
+  const loadingId = 'loading-' + Date.now();
+  messages.innerHTML += `<div id="${loadingId}" style="align-self:flex-start; background:var(--bg-2); padding:10px 14px; border-radius:12px; border-bottom-left-radius:2px; color:var(--text-secondary);">Typing...</div>`;
+  messages.scrollTop = messages.scrollHeight;
+  
+  try {
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+    document.getElementById(loadingId).remove();
+    if(res.ok) {
+      messages.innerHTML += `<div style="align-self:flex-start; background:var(--bg-2); padding:10px 14px; border-radius:12px; border-bottom-left-radius:2px; max-width:85%; color:var(--text); line-height:1.5;">${data.reply}</div>`;
+    } else {
+      messages.innerHTML += `<div style="align-self:flex-start; background:rgba(255,85,119,0.1); color:var(--red); padding:10px 14px; border-radius:12px; border-bottom-left-radius:2px; max-width:85%;">Error: ${data.detail}</div>`;
+    }
+  } catch(e) {
+    document.getElementById(loadingId).remove();
+    messages.innerHTML += `<div style="align-self:flex-start; background:rgba(255,85,119,0.1); color:var(--red); padding:10px 14px; border-radius:12px; border-bottom-left-radius:2px; max-width:85%;">Network Error</div>`;
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function generateAIScript() {
+  const input = document.getElementById('ai-script-prompt').value;
+  if(!input) return showToast('Please enter a prompt', 'error');
+  
+  const btn = document.getElementById('ai-gen-btn');
+  const resultBox = document.getElementById('ai-script-result');
+  btn.innerHTML = 'Generating...';
+  btn.style.opacity = '0.7';
+  
+  try {
+    const res = await fetch('/api/ai/generate-script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: input })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = `<strong>Your Generated Script:</strong><br><br>${data.script.replace(/\\n/g, '<br>')}`;
+      showToast('Script generated!', 'success');
+    } else {
+      showToast('Error: ' + data.detail, 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  }
+  btn.innerHTML = 'Generate Script';
+  btn.style.opacity = '1';
 }
 
 async function doDemoLogin() {
