@@ -50,6 +50,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8"
 
 # Create required directories before mounting StaticFiles
 os.makedirs("uploads", exist_ok=True)
