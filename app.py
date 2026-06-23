@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = "cutj qsnl zkqi fqlf"
     SECRET_KEY: str = "260d62bd48a8138886fd511a5746ae14864cd560dc6bf1a781e72fa6b101d5ae"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
@@ -100,16 +98,18 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     return True, "Password is valid"
 
 def get_password_hash(password: str) -> str:
+    if not password:
+        password = ""
     password_bytes = password.encode('utf-8')
-    sha256_digest = hashlib.sha256(password_bytes).digest()
-    b64_password = base64.b64encode(sha256_digest).decode('ascii')
-    return pwd_context.hash(b64_password)
+    sha256_digest = hashlib.sha256(password_bytes).hexdigest()
+    return pwd_context.hash(sha256_digest)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not plain_password:
+        plain_password = ""
     password_bytes = plain_password.encode('utf-8')
-    sha256_digest = hashlib.sha256(password_bytes).digest()
-    b64_password = base64.b64encode(sha256_digest).decode('ascii')
-    return pwd_context.verify(b64_password, hashed_password)
+    sha256_digest = hashlib.sha256(password_bytes).hexdigest()
+    return pwd_context.verify(sha256_digest, hashed_password)
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
