@@ -23,33 +23,41 @@ class EmailService:
         self.enabled = bool(self.smtp_user and self.smtp_password)
     
     def send_email(self, to_email: str, subject: str, body: str, html_body: Optional[str] = None) -> bool:
-        if not self.enabled:
+        brevo_api_key = os.getenv("BREVO_API_KEY", "")
+        if not brevo_api_key:
             logger.warning(f"Email service not configured. Would send to {to_email}: {subject}")
             print(f"OTP for {to_email}:\n{body}")
             return False
+            
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": brevo_api_key,
+            "content-type": "application/json"
+        }
         
+        data = {
+            "sender": {"name": "Menmozhi Team", "email": self.from_email or "suryaramisetty70@gmail.com"},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "textContent": body
+        }
+        if html_body:
+            data["htmlContent"] = html_body
+            
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.from_email
-            msg['To'] = to_email
-            msg.attach(MIMEText(body, 'plain'))
-            
-            if html_body:
-                msg.attach(MIMEText(html_body, 'html'))
-            
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                if self.use_tls:
-                    server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.from_email, to_email, msg.as_string())
-            
-            logger.info(f"Email sent successfully to {to_email}")
-            return True
-            
+            import requests
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+            if response.status_code in [200, 201, 202]:
+                logger.info(f"Email sent successfully to {to_email}")
+                return True
+            else:
+                logger.error(f"Failed to send email to {to_email}: {response.text}")
+                print(f"FAILED TO SEND EMAIL: {response.text}")
+                return False
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
-            print(f"FAILED TO SEND EMAIL: {e}")
+            logger.error(f"Exception sending email to {to_email}: {str(e)}")
+            print(f"FAILED TO SEND EMAIL EXCEPTION: {e}")
             return False
     
     def send_otp(self, to_email: str, otp: str) -> bool:
