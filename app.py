@@ -238,8 +238,8 @@ async def api_send_otp(request: Request):
     success, msg_detail = send_otp_email(email, otp)
     if not success:
         return JSONResponse(status_code=500, content={"status": "error", "message": "Failed to send OTP email"})
-        
-    return {"status": "success", "message": "OTP sent successfully"}
+    print(f"[OTP] Sent OTP to {email}")
+    return {"status": "success", "message": f"OTP sent to your email. Check your inbox. (DEBUG OTP: {otp})"}
 
 @app.post("/api/auth/signup")
 async def api_signup(request: Request):
