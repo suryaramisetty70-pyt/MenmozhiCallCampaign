@@ -37,18 +37,33 @@ def init_db(db_path="contacts.db"):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        first_name TEXT,
+        last_name TEXT,
         email TEXT UNIQUE NOT NULL,
-        username TEXT,
         password_hash TEXT NOT NULL,
-        created_at TEXT
+        is_verified BOOLEAN DEFAULT FALSE,
+        created_at TEXT,
+        last_login TEXT,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TEXT
     )
     """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS otp_verifications (
         email TEXT PRIMARY KEY,
-        otp TEXT NOT NULL,
-        expires_at REAL NOT NULL
+        otp_secret TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        user_id INTEGER NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        expires_at TEXT NOT NULL
     )
     """)
 
