@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, BackgroundTasks, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Form, BackgroundTasks, Depends, HTTPException, status, File, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse, Response, JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
