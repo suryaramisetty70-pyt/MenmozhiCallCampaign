@@ -77,7 +77,7 @@ def wipe_db():
 @app.get("/api/make-admin")
 def make_admin():
     with get_db_conn() as conn:
-        conn.execute("UPDATE users SET is_admin = 1")
+        conn.execute("UPDATE users SET is_admin = ?", (True,))
         conn.commit()
     return {"message": "All users are now admins! Please refresh the page."}
 
@@ -254,7 +254,7 @@ async def answer(request: Request):
         dtmf_url = settings.ANSWER_URL.replace('/answer', '/dtmf')
         
     with get_db_conn() as conn:
-        active_script = conn.execute("SELECT content FROM ivr_scripts WHERE is_active = 1 LIMIT 1").fetchone()
+        active_script = conn.execute("SELECT content FROM ivr_scripts WHERE is_active = ? LIMIT 1", (True,)).fetchone()
     
     speak_content = active_script["content"] if active_script else "Hello. This is Menmozhi Technologies. If you are available, please press 1. If not, press 0."
         
@@ -371,18 +371,17 @@ class IVRScriptUpdate(BaseModel):
 @app.get("/api/admin/ivr")
 def get_ivr_script(admin_id: int = Depends(get_admin_user)):
     with get_db_conn() as conn:
-        script = conn.execute("SELECT * FROM ivr_scripts WHERE is_active = 1 LIMIT 1").fetchone()
+        script = conn.execute("SELECT * FROM ivr_scripts WHERE is_active = ? LIMIT 1", (True,)).fetchone()
     return dict(script) if script else {"content": ""}
 
 @app.post("/api/admin/ivr")
 def update_ivr_script(req: IVRScriptUpdate, admin_id: int = Depends(get_admin_user)):
     with get_db_conn() as conn:
-        # Check if one exists
-        exists = conn.execute("SELECT id FROM ivr_scripts WHERE is_active = 1").fetchone()
+        exists = conn.execute("SELECT id FROM ivr_scripts WHERE is_active = ?", (True,)).fetchone()
         if exists:
             conn.execute("UPDATE ivr_scripts SET content = ? WHERE id = ?", (req.content, exists["id"]))
         else:
-            conn.execute("INSERT INTO ivr_scripts (name, content, is_active) VALUES ('Custom', ?, 1)", (req.content,))
+            conn.execute("INSERT INTO ivr_scripts (name, content, is_active) VALUES ('Custom', ?, ?)", (req.content, True))
         conn.commit()
     return {"message": "IVR script updated successfully"}
 
