@@ -16,12 +16,11 @@ router = APIRouter(prefix="/api")
 # { email: { "otp": "123456", "expires_at": datetime, "username": "user", "password": "hashed" } }
 otp_store: Dict[str, dict] = {}
 
+from database import get_connection
+
 def get_db_conn():
-    # Use the same connection approach as app.py
     DATABASE_URL = os.getenv("DATABASE_URL", "contacts.db")
-    conn = sqlite3.connect(DATABASE_URL)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return get_connection(DATABASE_URL)
 
 class UserLogin(BaseModel):
     username: str
@@ -42,12 +41,22 @@ class OTPSendRequest(BaseModel):
     email: str
     username: str
     password: str
+    delivery_method: str = "email" # "email" or "sms"
+    phone: str = None
 
 class OTPVerifyRequest(BaseModel):
     email: str
     otp: str
     username: str
     password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
 
 def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
@@ -78,8 +87,15 @@ def send_otp(request: OTPSendRequest):
         "password": hashed_password
     }
     
-    email_service.send_otp(request.email, otp)
-    return {"message": "OTP sent to your email", "email": request.email}
+    if request.delivery_method == "sms" and request.phone:
+        from sms_service import sms_service
+        success = sms_service.send_otp(request.phone, otp)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to send SMS OTP")
+    else:
+        email_service.send_otp(request.email, otp)
+        
+    return {"message": f"OTP sent successfully via {request.delivery_method.upper()}", "email": request.email}
 
 @router.post("/auth/verify-otp", response_model=Token)
 def verify_otp_and_register(request: OTPVerifyRequest):
@@ -126,3 +142,49 @@ def login(user: UserLogin):
         
     token = create_access_token({"sub": str(db_user["id"])})
     return Token(access_token=token, token_type="bearer", is_admin=False, user_id=db_user["id"])
+
+@router.post("/auth/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    user = cursor.execute("SELECT id FROM users WHERE email = ?", (request.email,)).fetchone()
+    conn.close()
+    
+    if not user:
+        # Don't reveal if email exists or not
+        return {"message": "If that email is registered, we have sent a reset OTP."}
+        
+    otp = generate_otp()
+    otp_store[request.email + "_reset"] = {
+        "otp": otp,
+        "expires_at": datetime.utcnow() + timedelta(minutes=10),
+        "user_id": user["id"]
+    }
+    
+    email_service.send_otp(request.email, otp)
+    return {"message": "If that email is registered, we have sent a reset OTP."}
+
+@router.post("/auth/reset-password")
+def reset_password(request: ResetPasswordRequest):
+    store_key = request.email + "_reset"
+    record = otp_store.get(store_key)
+    
+    if not record:
+        raise HTTPException(status_code=400, detail="OTP expired or not requested")
+        
+    if record["otp"] != request.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+        
+    if datetime.utcnow() > record["expires_at"]:
+        del otp_store[store_key]
+        raise HTTPException(status_code=400, detail="OTP has expired")
+        
+    conn = get_db_conn()
+    cursor = conn.cursor()
+    hashed_password = get_password_hash(request.new_password)
+    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed_password, record["user_id"]))
+    conn.commit()
+    conn.close()
+    
+    del otp_store[store_key]
+    return {"message": "Password reset successfully. You can now login."}

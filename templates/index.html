@@ -526,7 +526,10 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
         <input type="password" id="login-pass" placeholder="Enter password">
       </div>
       <button class="auth-btn" onclick="doLogin()">ACCESS SYSTEM</button>
-      <div class="auth-alt-text">Don't have an account? <a onclick="switchAuthView('register')">Register now</a></div>
+      <div class="auth-alt-text">
+        <a onclick="switchAuthView('forgot-password')">Forgot password?</a> | 
+        Don't have an account? <a onclick="switchAuthView('register')">Register now</a>
+      </div>
     </div>
 
     <!-- REGISTER STEP 1 -->
@@ -543,6 +546,21 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
         <label>Password</label>
         <input type="password" id="reg-pass" placeholder="Create password">
       </div>
+      
+      <!-- New Delivery Method Selection -->
+      <div class="auth-form-group">
+        <label>OTP Delivery Method</label>
+        <select id="reg-method" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border-strong); background:var(--bg-lighter); color:var(--text); font-family:var(--font);" onchange="document.getElementById('reg-phone-group').style.display = this.value === 'sms' ? 'block' : 'none'">
+          <option value="email">Send OTP to Email</option>
+          <option value="sms">Send OTP via SMS</option>
+        </select>
+      </div>
+      
+      <div class="auth-form-group" id="reg-phone-group" style="display:none;">
+        <label>Phone Number</label>
+        <input type="text" id="reg-phone" placeholder="e.g. +919876543210">
+      </div>
+
       <button class="auth-btn" onclick="doSendOTP()">SEND OTP</button>
     </div>
 
@@ -550,10 +568,34 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
     <div id="view-otp" class="auth-view">
       <div class="auth-form-group">
         <label>Verification Code</label>
-        <input type="text" id="reg-otp" placeholder="Enter 6-digit OTP from email" maxlength="6" style="text-align:center;font-size:24px;letter-spacing:5px;">
+        <input type="text" id="reg-otp" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align:center;font-size:24px;letter-spacing:5px;">
       </div>
       <button class="auth-btn" onclick="doVerifyOTP()">VERIFY & REGISTER</button>
       <div class="auth-alt-text"><a onclick="switchAuthView('register')">Back to Registration</a></div>
+    </div>
+
+    <!-- FORGOT PASSWORD STEP 1 -->
+    <div id="view-forgot-password" class="auth-view">
+      <div class="auth-form-group">
+        <label>Email Address</label>
+        <input type="email" id="forgot-email" placeholder="Enter registered email">
+      </div>
+      <button class="auth-btn" onclick="doForgotPassword()">SEND OTP</button>
+      <div class="auth-alt-text"><a onclick="switchAuthView('login')">Back to Login</a></div>
+    </div>
+
+    <!-- FORGOT PASSWORD STEP 2 -->
+    <div id="view-reset-password" class="auth-view">
+      <div class="auth-form-group">
+        <label>OTP Code</label>
+        <input type="text" id="reset-otp" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align:center;font-size:24px;letter-spacing:5px;">
+      </div>
+      <div class="auth-form-group">
+        <label>New Password</label>
+        <input type="password" id="reset-pass" placeholder="Enter new password">
+      </div>
+      <button class="auth-btn" onclick="doResetPassword()">RESET PASSWORD</button>
+      <div class="auth-alt-text"><a onclick="switchAuthView('login')">Cancel</a></div>
     </div>
 
     <!-- DEMO -->
@@ -644,6 +686,7 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
   <button class="tab-btn" data-tab="no-response" id="tab-no-response">📵 No Response <span class="badge">{{ no_response_logs|length }}</span></button>
   <button class="tab-btn" data-tab="logs" id="tab-logs">📜 All Logs <span class="badge">{{ logs|length }}</span></button>
   <button class="tab-btn" data-tab="ai-scripts" id="tab-ai-scripts">✨ AI Scripts</button>
+  <button class="tab-btn" data-tab="admin" id="tab-admin" style="display:none">⚙️ Admin Panel</button>
 </nav>
 
 <!-- ===== TAB: DASHBOARD ===== -->
@@ -896,6 +939,43 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
   </div>
 </div>
 
+<!-- ===== TAB: ADMIN PANEL ===== -->
+<div class="tab-content" id="panel-admin">
+  <div class="cards" style="grid-template-columns: 1fr 1fr">
+    <div class="card glass c-blue">
+      <div class="card-label">Admin: Total Users</div>
+      <div class="card-value" id="admin-total-users">Loading...</div>
+    </div>
+    <div class="card glass c-violet">
+      <div class="card-label">Admin: Total Call API Logs</div>
+      <div class="card-value" id="admin-total-campaigns">Loading...</div>
+    </div>
+  </div>
+  
+  <h3 style="color:var(--text); font-family:var(--font); margin:20px 0 10px;">Registered Users</h3>
+  <div class="table-container glass">
+    <table id="admin-users-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Verified</th>
+          <th>Admin</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="5" class="empty">Loading users...</td></tr></tbody>
+    </table>
+  </div>
+  
+  <h3 style="color:var(--text); font-family:var(--font); margin:30px 0 10px;">IVR Script Configuration</h3>
+  <div class="glass" style="padding:20px; border-radius:12px;">
+    <p style="color:var(--muted); font-size:12px; margin-bottom:10px;">Customize the spoken message during the automated call.</p>
+    <textarea id="admin-ivr-text" style="width:100%; height:80px; padding:10px; border-radius:8px; border:1px solid var(--border-strong); background:var(--bg-lighter); color:var(--text); font-family:var(--font); margin-bottom:10px;"></textarea>
+    <button class="btn call" onclick="saveIVRScript()">Save IVR Script</button>
+  </div>
+</div>
+
 <!-- ===== AI CHAT WIDGET ===== -->
 <div id="ai-chat-widget" style="position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; background:var(--grad-aurora); cursor:pointer; box-shadow:0 0 20px rgba(0,229,255,0.4); display:flex; align-items:center; justify-content:center; z-index:100; transition:var(--transition);" onclick="toggleChat()">
   <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:28px; height:28px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -926,7 +1006,7 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
   tick();setInterval(tick,1000);
 })();
 
-// ===== TABS =====
+// ===== TABS LOGIC =====
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1261,10 +1341,14 @@ async function doLogin() {
 }
 
 async function doSendOTP() {
-  const user = document.getElementById('reg-user').value;
-  const email = document.getElementById('reg-email').value;
+  const user = document.getElementById('reg-user').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
   const pass = document.getElementById('reg-pass').value;
-  if(!user || !email || !pass) return showToast('Please fill all fields', 'error');
+  const method = document.getElementById('reg-method').value;
+  const phone = document.getElementById('reg-phone').value.trim();
+  
+  if(!user || !email || !pass) return showToast('Fill all fields', 'error');
+  if(method === 'sms' && !phone) return showToast('Enter phone number for SMS OTP', 'error');
 
   const btn = document.querySelector('#view-register .auth-btn');
   btn.textContent = 'SENDING...';
@@ -1273,12 +1357,12 @@ async function doSendOTP() {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, email: email, password: pass })
+      body: JSON.stringify({ username: user, email: email, password: pass, delivery_method: method, phone: phone })
     });
     const data = await res.json();
     if(res.ok) {
       document.getElementById('auth-error-msg').style.display = 'none';
-      showToast('OTP sent to ' + email, 'success');
+      showToast(data.message || 'OTP sent!', 'success');
       switchAuthView('otp');
     } else {
       document.getElementById('auth-error-msg').textContent = data.detail || 'Failed to send OTP. Username or Email already exists.';
@@ -1321,6 +1405,68 @@ async function doVerifyOTP() {
   } catch(e) {
     document.getElementById('auth-error-msg').textContent = 'Network error';
     document.getElementById('auth-error-msg').style.display = 'block';
+  }
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  if(!email) return showToast('Enter your email', 'error');
+  
+  const btn = document.querySelector('#view-forgot-password .auth-btn');
+  btn.textContent = 'SENDING...';
+  
+  try {
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      document.getElementById('auth-error-msg').style.display = 'none';
+      showToast(data.message, 'success');
+      switchAuthView('reset-password');
+    } else {
+      document.getElementById('auth-error-msg').textContent = data.detail || 'Failed to request reset';
+      document.getElementById('auth-error-msg').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('auth-error-msg').textContent = 'Network error';
+    document.getElementById('auth-error-msg').style.display = 'block';
+  } finally {
+    btn.textContent = 'SEND OTP';
+  }
+}
+
+async function doResetPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const otp = document.getElementById('reset-otp').value.trim();
+  const pass = document.getElementById('reset-pass').value;
+  if(!otp || !pass) return showToast('Fill all fields', 'error');
+  
+  const btn = document.querySelector('#view-reset-password .auth-btn');
+  btn.textContent = 'RESETTING...';
+  
+  try {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, otp: otp, new_password: pass })
+    });
+    const data = await res.json();
+    if(res.ok) {
+      document.getElementById('auth-error-msg').style.display = 'none';
+      showToast(data.message, 'success');
+      switchAuthView('login');
+    } else {
+      document.getElementById('auth-error-msg').textContent = data.detail || 'Failed to reset password';
+      document.getElementById('auth-error-msg').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('auth-error-msg').textContent = 'Network error';
+    document.getElementById('auth-error-msg').style.display = 'block';
+  } finally {
+    btn.textContent = 'RESET PASSWORD';
   }
 }
 
@@ -1431,7 +1577,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       if(res.ok) {
+        const data = await res.json();
         document.getElementById('auth-overlay').style.display = 'none';
+        if(data.is_admin) {
+            document.getElementById('tab-admin').style.display = 'flex';
+            fetchAdminData(token);
+        }
       } else {
         localStorage.removeItem('access_token');
       }
@@ -1440,6 +1591,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 });
+
+async function fetchAdminData(token) {
+  try {
+    const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token }});
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('admin-total-users').textContent = data.users.length;
+      const tbody = document.querySelector('#admin-users-table tbody');
+      tbody.innerHTML = '';
+      data.users.forEach(u => {
+        tbody.innerHTML += `<tr>
+          <td>${u.id}</td>
+          <td>${u.username}</td>
+          <td>${u.email}</td>
+          <td>${u.is_verified ? 'Yes' : 'No'}</td>
+          <td>${u.is_admin ? 'Yes' : 'No'}</td>
+        </tr>`;
+      });
+    }
+    const cRes = await fetch('/api/admin/campaigns', { headers: { 'Authorization': 'Bearer ' + token }});
+    if (cRes.ok) {
+        const cData = await cRes.json();
+        document.getElementById('admin-total-campaigns').textContent = cData.logs.length;
+    }
+    const iRes = await fetch('/api/admin/ivr', { headers: { 'Authorization': 'Bearer ' + token }});
+    if (iRes.ok) {
+        const iData = await iRes.json();
+        document.getElementById('admin-ivr-text').value = iData.content || '';
+    }
+  } catch(e){}
+}
+
+async function saveIVRScript() {
+  const token = localStorage.getItem('access_token');
+  const content = document.getElementById('admin-ivr-text').value;
+  if(!content) return showToast('Please enter IVR text', 'error');
+  try {
+    const res = await fetch('/api/admin/ivr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ content: content })
+    });
+    const data = await res.json();
+    if(res.ok) {
+        showToast(data.message, 'success');
+    } else {
+        showToast('Failed to save script', 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  }
+}
 </script>
 </body>
 </html>

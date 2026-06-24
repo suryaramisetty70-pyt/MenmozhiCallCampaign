@@ -8,9 +8,12 @@ from contextlib import contextmanager
 import pandas as pd
 import sqlite3
 import requests
+import aiohttp
+from typing import Optional, List, Dict
 import time
 import os
 from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 def get_current_time_str(format_str="%Y-%m-%d %H:%M:%S"):
     try:
@@ -53,13 +56,20 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Invalid token")
     return user_id
 
+def get_admin_user(user_id: int = Depends(get_current_user)):
+    with get_db_conn() as conn:
+        user = conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user or not user["is_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user_id
+
 app.include_router(auth_router)
 app.include_router(ai_router)
 
 @app.get("/api/me")
 def api_me(user_id: int = Depends(get_current_user)):
     with get_db_conn() as conn:
-        user = conn.execute("SELECT id, username, email FROM users WHERE id = ?", (user_id,)).fetchone()
+        user = conn.execute("SELECT id, username, email, is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return dict(user)
@@ -102,10 +112,11 @@ def on_startup():
             
     print(f"[SUCCESS] App started.")
 
+from database import get_connection
+
 @contextmanager
 def get_db_conn():
-    conn = sqlite3.connect(settings.DATABASE_URL)
-    conn.row_factory = sqlite3.Row
+    conn = get_connection(settings.DATABASE_URL)
     try:
         yield conn
     finally:
@@ -226,9 +237,15 @@ async def answer(request: Request):
         dtmf_url = str(request.url_for("dtmf_handler")).replace("http://", "https://")
     except:
         dtmf_url = settings.ANSWER_URL.replace('/answer', '/dtmf')
+        
+    with get_db_conn() as conn:
+        active_script = conn.execute("SELECT content FROM ivr_scripts WHERE is_active = 1 LIMIT 1").fetchone()
+    
+    speak_content = active_script["content"] if active_script else "Hello. This is Menmozhi Technologies. If you are available, please press 1. If not, press 0."
+        
     xml = f"""<Response>
 <GetDigits action="{dtmf_url}" method="POST" numDigits="1" timeout="10">
-<Speak>Hello. This is Menmozhi Technologies. If you are available, please press 1. If not, press 0.</Speak>
+<Speak>{speak_content}</Speak>
 </GetDigits>
 <Speak>No response received.</Speak>
 </Response>"""
@@ -319,7 +336,40 @@ def get_stats(user_id: int = Depends(get_current_user)):
 def api_contacts():
     with get_db_conn() as conn:
         contacts = conn.execute("SELECT * FROM contacts").fetchall()
-    return {"contacts": [dict(row) for row in contacts]}
+    return {"contacts": [dict(r) for r in contacts]}
+
+@app.get("/api/admin/users")
+def get_admin_users(admin_id: int = Depends(get_admin_user)):
+    with get_db_conn() as conn:
+        users = conn.execute("SELECT id, username, email, first_name, last_name, is_verified, is_admin FROM users ORDER BY id DESC").fetchall()
+    return {"users": [dict(u) for u in users]}
+
+@app.get("/api/admin/campaigns")
+def get_admin_campaigns(admin_id: int = Depends(get_admin_user)):
+    with get_db_conn() as conn:
+        logs = conn.execute("SELECT * FROM call_api_logs ORDER BY id DESC").fetchall()
+    return {"logs": [dict(l) for l in logs]}
+
+class IVRScriptUpdate(BaseModel):
+    content: str
+
+@app.get("/api/admin/ivr")
+def get_ivr_script(admin_id: int = Depends(get_admin_user)):
+    with get_db_conn() as conn:
+        script = conn.execute("SELECT * FROM ivr_scripts WHERE is_active = 1 LIMIT 1").fetchone()
+    return dict(script) if script else {"content": ""}
+
+@app.post("/api/admin/ivr")
+def update_ivr_script(req: IVRScriptUpdate, admin_id: int = Depends(get_admin_user)):
+    with get_db_conn() as conn:
+        # Check if one exists
+        exists = conn.execute("SELECT id FROM ivr_scripts WHERE is_active = 1").fetchone()
+        if exists:
+            conn.execute("UPDATE ivr_scripts SET content = ? WHERE id = ?", (req.content, exists["id"]))
+        else:
+            conn.execute("INSERT INTO ivr_scripts (name, content, is_active) VALUES ('Custom', ?, 1)", (req.content,))
+        conn.commit()
+    return {"message": "IVR script updated successfully"}
 
 @app.get("/api-call-logs")
 def api_call_logs():
