@@ -186,11 +186,11 @@ async def upload_excel(file: UploadFile = File(...)):
         contacts_to_insert.append((name, phone))
     if contacts_to_insert:
         with get_db_conn() as conn:
-            if conn.is_postgres:
-                query = "INSERT INTO contacts (name, phone) VALUES (?, ?) ON CONFLICT (phone) DO NOTHING"
-            else:
-                query = "INSERT OR IGNORE INTO contacts (name, phone) VALUES (?, ?)"
-            conn.executemany(query, contacts_to_insert)
+            existing = conn.execute("SELECT phone FROM contacts").fetchall()
+            existing_phones = set(row["phone"] for row in existing) if existing else set()
+            filtered_contacts = [(n, p) for n, p in contacts_to_insert if p not in existing_phones]
+            if filtered_contacts:
+                conn.executemany("INSERT INTO contacts (name, phone) VALUES (?, ?)", filtered_contacts)
             conn.commit()
     return RedirectResponse(url="/", status_code=303)
 
