@@ -102,17 +102,22 @@ def init_db(db_url="contacts.db"):
     try:
         cursor.execute("SELECT first_name FROM users LIMIT 1")
     except Exception:
+        if conn.is_postgres:
+            conn.conn.rollback()
         cursor.execute("DROP TABLE IF EXISTS users")
         conn.commit()
         
     try:
         cursor.execute("SELECT is_admin FROM users LIMIT 1")
     except Exception:
+        if conn.is_postgres:
+            conn.conn.rollback()
         try:
             cursor.execute("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE")
             conn.commit()
         except Exception:
-            pass
+            if conn.is_postgres:
+                conn.conn.rollback()
 
     create_table("""
     CREATE TABLE IF NOT EXISTS contacts (
