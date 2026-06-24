@@ -23,7 +23,7 @@ def get_current_time_str(format_str="%Y-%m-%d %H:%M:%S"):
 class Settings(BaseSettings):
     AUTH_ID: str = "SA_OBPZVF0E"
     AUTH_TOKEN: str = "xczGOPgZi3TFCk7YMRDEsmU3vsD3xn8TSkGEOmOrNILzj8hbXMtOUvR79rVyP4KN"
-    DATABASE_URL: str = "contacts.db"
+    DATABASE_URL: str = "postgresql://" + "menmozhi_database_user" + ":" + "ogvVlhpH9gpFP14n9Uj6A0azIUe1IdwN" + "@" + "dpg-d8u0hkjsq97s73ckv6c0-a" + "/menmozhi_database"
     CALLER_ID: str = "+918065481889"
     ANSWER_URL: str = "https://menmozhicallcampaign-1.onrender.com/answer"
 

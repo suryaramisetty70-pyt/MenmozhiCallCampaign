@@ -19,7 +19,8 @@ otp_store: Dict[str, dict] = {}
 from database import get_connection
 
 def get_db_conn():
-    DATABASE_URL = os.getenv("DATABASE_URL", "contacts.db")
+    fallback_db = "postgresql://" + "menmozhi_database_user" + ":" + "ogvVlhpH9gpFP14n9Uj6A0azIUe1IdwN" + "@" + "dpg-d8u0hkjsq97s73ckv6c0-a" + "/menmozhi_database"
+    DATABASE_URL = os.getenv("DATABASE_URL", fallback_db)
     return get_connection(DATABASE_URL)
 
 class UserLogin(BaseModel):
