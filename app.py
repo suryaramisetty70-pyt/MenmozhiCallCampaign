@@ -144,11 +144,11 @@ def get_db_conn():
 def dashboard(request: Request):
     with get_db_conn() as conn:
         cursor = conn.cursor()
-        contacts = cursor.execute("SELECT * FROM contacts").fetchall()
-        logs = cursor.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()
-        available_logs = cursor.execute("SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC").fetchall()
-        not_available_logs = cursor.execute("SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC").fetchall()
-        no_response_logs = cursor.execute("SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC").fetchall()
+        contacts = [tuple(r) for r in cursor.execute("SELECT * FROM contacts").fetchall()]
+        logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()]
+        available_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC").fetchall()]
+        not_available_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC").fetchall()]
+        no_response_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC").fetchall()]
 
     return templates.TemplateResponse(
         request=request,
