@@ -20,7 +20,7 @@ def get_current_time_str(format_str="%Y-%m-%d %H:%M:%S"):
 
 class Settings(BaseSettings):
     AUTH_ID: str = "SA_OBPZVF0E"
-    AUTH_TOKEN: str = "3wiGGYBhqNDgxKJz72vP5R0YILOuxhsWU7Ka0orDR6GuO2PXtWBcZv6JA7CqJh8S"
+    AUTH_TOKEN: str = "xczGOPgZi3TFCk7YMRDEsmU3vsD3xn8TSkGEOmOrNILzj8hbXMtOUvR79rVyP4KN"
     DATABASE_URL: str = "contacts.db"
     CALLER_ID: str = "+918065481889"
     ANSWER_URL: str = "https://file-deposit-image-proceeding.trycloudflare.com/answer"
