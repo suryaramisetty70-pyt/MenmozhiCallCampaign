@@ -8,7 +8,6 @@ from contextlib import contextmanager
 import pandas as pd
 import sqlite3
 import requests
-import aiohttp
 from typing import Optional, List, Dict
 import time
 import os
