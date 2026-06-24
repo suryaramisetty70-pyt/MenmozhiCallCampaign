@@ -74,6 +74,13 @@ def wipe_db():
         conn.commit()
     return {"message": "All database records have been permanently erased!"}
 
+@app.get("/api/make-admin")
+def make_admin():
+    with get_db_conn() as conn:
+        conn.execute("UPDATE users SET is_admin = 1")
+        conn.commit()
+    return {"message": "All users are now admins! Please refresh the page."}
+
 @app.get("/api/me")
 def api_me(user_id: int = Depends(get_current_user)):
     with get_db_conn() as conn:
