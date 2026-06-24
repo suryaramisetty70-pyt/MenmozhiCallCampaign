@@ -144,11 +144,14 @@ def get_db_conn():
 def dashboard(request: Request):
     with get_db_conn() as conn:
         cursor = conn.cursor()
-        contacts = [tuple(r) for r in cursor.execute("SELECT * FROM contacts").fetchall()]
-        logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()]
-        available_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC").fetchall()]
-        not_available_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC").fetchall()]
-        no_response_logs = [tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC").fetchall()]
+        def to_tuple(r):
+            return tuple(r.values()) if hasattr(r, 'values') else tuple(r)
+            
+        contacts = [to_tuple(r) for r in cursor.execute("SELECT * FROM contacts").fetchall()]
+        logs = [to_tuple(r) for r in cursor.execute("SELECT * FROM call_logs ORDER BY id DESC").fetchall()]
+        available_logs = [to_tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='AVAILABLE' ORDER BY id DESC").fetchall()]
+        not_available_logs = [to_tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NOT AVAILABLE' ORDER BY id DESC").fetchall()]
+        no_response_logs = [to_tuple(r) for r in cursor.execute("SELECT * FROM call_logs WHERE status='NO RESPONSE' ORDER BY id DESC").fetchall()]
 
     return templates.TemplateResponse(
         request=request,
