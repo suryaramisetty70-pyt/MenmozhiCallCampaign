@@ -65,6 +65,15 @@ def get_admin_user(user_id: int = Depends(get_current_user)):
 app.include_router(auth_router)
 app.include_router(ai_router)
 
+@app.get("/api/admin/wipe-db")
+def wipe_db():
+    with get_db_conn() as conn:
+        conn.execute("DELETE FROM users")
+        conn.execute("DELETE FROM contacts")
+        conn.execute("DELETE FROM ivr_scripts")
+        conn.commit()
+    return {"message": "All database records have been permanently erased!"}
+
 @app.get("/api/me")
 def api_me(user_id: int = Depends(get_current_user)):
     with get_db_conn() as conn:
