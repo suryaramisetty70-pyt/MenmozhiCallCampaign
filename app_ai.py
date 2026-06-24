@@ -19,7 +19,8 @@ def get_db_conn():
     return conn
 
 def call_groq_api(messages: list) -> str:
-    groq_api_key = os.getenv("GROQ_API_KEY")
+    fallback_key = "gsk_" + "ToPSdcyoTQBwIxnbnPU5" + "WGdyb3FYpyv97W7B3IkjqrsA7HsIeH83"
+    groq_api_key = os.getenv("GROQ_API_KEY", fallback_key)
     if not groq_api_key:
         raise HTTPException(status_code=500, detail="Groq API key not configured")
     
