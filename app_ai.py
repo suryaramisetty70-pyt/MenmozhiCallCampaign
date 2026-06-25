@@ -76,7 +76,8 @@ Answer the user's question based on these stats. Keep responses under 3 sentence
 @ai_router.post("/generate-script")
 def generate_script(req: ScriptRequest):
     system_prompt = """You are an expert telemarketing script writer. 
-Write a short, engaging, professional voice script (under 30 seconds to read) for a robotic or AI voice caller.
+Write a short, engaging, professional voice script (under 30 seconds to read) for an AI voice caller.
+IMPORTANT: To make the robot voice speak at a medium, natural human pace, you MUST use heavy punctuation. Use commas frequently between phrases, and use periods for full stops. Do NOT write long run-on sentences.
 Do NOT include any stage directions like [Pause] or (Cheerful voice). Just return the exact text to be spoken.
 The script MUST end with a clear instruction: 'If you are interested, please press 1. If not, press 0.'"""
 
