@@ -270,9 +270,9 @@ async def answer(request: Request):
         
     xml = f"""<Response>
       <GetDigits timeout="10" numDigits="1" action="{dtmf_url}" method="POST">
-        <Speak><prosody rate="slow">{speak_content}</prosody></Speak>
+        <Speak>{speak_content}</Speak>
       </GetDigits>
-      <Speak><prosody rate="slow">No response received.</prosody></Speak>
+      <Speak>No response received.</Speak>
     </Response>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -303,7 +303,7 @@ async def dtmf_handler(request: Request):
             else:
                 conn.execute("INSERT INTO call_logs (name, phone, status, call_time) VALUES (?, ?, ?, ?)", (name, to_number, status_val, get_current_time_str()))
             conn.commit()
-    return Response(content="<Response><Speak><prosody rate=\"slow\">Thank you.</prosody></Speak></Response>", media_type="application/xml")
+    return Response(content="<Response><Speak>Thank you.</Speak></Response>", media_type="application/xml")
 
 # =========================
 # VIEW LOGS / EXPORT / DELETE
