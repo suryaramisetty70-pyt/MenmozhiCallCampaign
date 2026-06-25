@@ -399,4 +399,88 @@ def update_ivr_script(req: IVRScriptUpdate, admin_id: int = Depends(get_admin_us
 def api_call_logs():
     with get_db_conn() as conn:
         logs = conn.execute("SELECT * FROM call_api_logs ORDER BY id DESC").fetchall()
-    return {"logs": [dict(row) for row in logs]}
+    return {"logs": [dict(row) for row in logs]}from fastapi import APIRouter, File, UploadFile, Form
+from fastapi.responses import JSONResponse
+import pandas as pd
+from database import get_db_conn
+from datetime import datetime
+
+v2_router = APIRouter(prefix="/api/v2")
+
+def get_current_time_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def to_dict(row):
+    return dict(row) if hasattr(row, 'keys') else dict(zip(row.keys(), row)) if hasattr(row, 'keys') else row
+
+@v2_router.get("/dashboard")
+def v2_dashboard():
+    with get_db_conn() as conn:
+        cursor = conn.cursor()
+        total = cursor.execute("SELECT COUNT(*) as c FROM contacts").fetchone()
+        logs = cursor.execute("SELECT * FROM call_logs ORDER BY id DESC LIMIT 50").fetchall()
+        
+        total_contacts = total[0] if total and isinstance(total, tuple) else total['c'] if total else 0
+        
+        success = sum(1 for l in logs if l['status'] == 'AVAILABLE')
+        failed = sum(1 for l in logs if l['status'] != 'AVAILABLE')
+        
+        formatted_logs = [{"name": l['name'], "phone": l['phone'], "status": l['status'], "time": l['call_time']} for l in logs]
+        
+        return JSONResponse({
+            "stats": {
+                "total": total_contacts,
+                "available": total_contacts,
+                "success": success,
+                "failed": failed
+            },
+            "logs": formatted_logs
+        })
+
+@v2_router.post("/upload")
+async def v2_upload(file: UploadFile = File(...), clear_existing: str = Form(None)):
+    try:
+        df = pd.read_excel(file.file, header=None).fillna("")
+        df = df.astype(str)
+        contacts_to_insert = []
+        for i in range(len(df)):
+            row = df.iloc[i]
+            if len(row) < 2: continue
+            name = str(row[0]).strip()
+            phone = "".join(filter(str.isdigit, str(row[1])))
+            if name.lower() in ["nan", "name", "a1", "b1", ""]: continue
+            if name == "" or phone == "": continue
+            if len(phone) > 10: phone = phone[-10:]
+            if len(phone) < 10: continue
+            contacts_to_insert.append((name, phone))
+            
+        if contacts_to_insert:
+            with get_db_conn() as conn:
+                if clear_existing:
+                    conn.execute("DELETE FROM contacts")
+                existing = conn.execute("SELECT phone FROM contacts").fetchall()
+                existing_phones = set(r["phone"] for r in existing) if existing else set()
+                filtered = [(n, p) for n, p in contacts_to_insert if p not in existing_phones]
+                if filtered:
+                    conn.executemany("INSERT INTO contacts (name, phone) VALUES (?, ?)", filtered)
+                conn.commit()
+        return {"status": "success", "inserted": len(contacts_to_insert)}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+@v2_router.post("/call-all")
+def v2_call_all():
+    from app import run_call_campaign
+    from fastapi import BackgroundTasks
+    # To keep it simple without importing the background task from app easily, 
+    # we just fetch contacts and trigger it.
+    with get_db_conn() as conn:
+        contacts = conn.execute("SELECT id, name, phone FROM contacts").fetchall()
+        contacts_data = [{"id": r["id"], "name": r["name"], "phone": r["phone"]} for r in contacts]
+    
+    # We can invoke the existing background task logic, but we need BackgroundTasks injected
+    # Let's just import it from app or copy the basic logic
+    pass # we will hook this up in app.py directly to avoid circular imports.
+app.include_router(v2_router)
+from fastapi.staticfiles import StaticFiles
+app.mount('/v2', StaticFiles(directory='frontend/dist', html=True), name='frontend')
