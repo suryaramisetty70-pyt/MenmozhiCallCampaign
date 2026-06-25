@@ -404,7 +404,7 @@ def api_call_logs():
 from fastapi import APIRouter, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 import pandas as pd
-from database import get_db_conn
+
 from datetime import datetime
 
 v2_router = APIRouter(prefix="/api/v2")
