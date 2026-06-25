@@ -699,6 +699,9 @@ td.time-cell{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m
     <a href="/export-logs" class="btn export">📥 Export Logs</a>
     <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="file" accept=".xlsx,.xls" required>
+      <label style="display:flex; align-items:center; gap:5px; margin:0 10px; font-size:12px; color:#fff; cursor:pointer;">
+        <input type="checkbox" name="clear_existing" value="true"> Clear existing contacts
+      </label>
       <button class="btn upload" type="submit">📤 Upload Excel</button>
     </form>
     <button class="btn danger sm" onclick="confirmAction('Clear All Logs', 'This will permanently delete all call logs. Continue?', '/delete-all-logs')">🗑 Clear Logs</button>

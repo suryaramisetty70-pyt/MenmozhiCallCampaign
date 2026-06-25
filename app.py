@@ -170,7 +170,7 @@ def dashboard(request: Request):
 # UPLOAD EXCEL
 # =========================
 @app.post("/upload")
-async def upload_excel(file: UploadFile = File(...)):
+async def upload_excel(file: UploadFile = File(...), clear_existing: str = Form(None)):
     try:
         df = pd.read_excel(file.file, header=None).fillna("")
         df = df.astype(str)
@@ -189,6 +189,9 @@ async def upload_excel(file: UploadFile = File(...)):
         contacts_to_insert.append((name, phone))
     if contacts_to_insert:
         with get_db_conn() as conn:
+            if clear_existing:
+                conn.execute("DELETE FROM contacts")
+                conn.execute("DELETE FROM sqlite_sequence WHERE name='contacts'") # if sqlite
             existing = conn.execute("SELECT phone FROM contacts").fetchall()
             existing_phones = set(row["phone"] for row in existing) if existing else set()
             filtered_contacts = [(n, p) for n, p in contacts_to_insert if p not in existing_phones]
@@ -266,11 +269,11 @@ async def answer(request: Request):
     speak_content = active_script["content"] if active_script else "Hello. This is Menmozhi Technologies. If you are available, please press 1. If not, press 0."
         
     xml = f"""<Response>
-<GetDigits action="{dtmf_url}" method="POST" numDigits="1" timeout="10">
-<Speak>{speak_content}</Speak>
-</GetDigits>
-<Speak>No response received.</Speak>
-</Response>"""
+      <GetDigits timeout="10" numDigits="1" action="{dtmf_url}" method="POST">
+        <Speak><prosody rate="slow">{speak_content}</prosody></Speak>
+      </GetDigits>
+      <Speak><prosody rate="slow">No response received.</prosody></Speak>
+    </Response>"""
     return Response(content=xml, media_type="application/xml")
 
 # =========================
@@ -300,7 +303,7 @@ async def dtmf_handler(request: Request):
             else:
                 conn.execute("INSERT INTO call_logs (name, phone, status, call_time) VALUES (?, ?, ?, ?)", (name, to_number, status_val, get_current_time_str()))
             conn.commit()
-    return Response(content="<Response><Speak>Thank you.</Speak></Response>", media_type="application/xml")
+    return Response(content="<Response><Speak><prosody rate=\"slow\">Thank you.</prosody></Speak></Response>", media_type="application/xml")
 
 # =========================
 # VIEW LOGS / EXPORT / DELETE
