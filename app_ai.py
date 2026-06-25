@@ -12,11 +12,7 @@ class ChatRequest(BaseModel):
 class ScriptRequest(BaseModel):
     prompt: str
 
-def get_db_conn():
-    DATABASE_URL = os.getenv("DATABASE_URL", "contacts.db")
-    conn = sqlite3.connect(DATABASE_URL)
-    conn.row_factory = sqlite3.Row
-    return conn
+
 
 def call_groq_api(messages: list) -> str:
     fallback_key = "gsk_" + "ToPSdcyoTQBwIxnbnPU5" + "WGdyb3FYpyv97W7B3IkjqrsA7HsIeH83"
@@ -46,6 +42,7 @@ def call_groq_api(messages: list) -> str:
 
 @ai_router.post("/chat")
 def ai_chat(req: ChatRequest):
+    from app import get_db_conn
     # Fetch some stats to give the AI context
     with get_db_conn() as conn:
         total_calls = conn.execute("SELECT COUNT(*) FROM call_logs").fetchone()[0]
