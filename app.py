@@ -399,7 +399,9 @@ def update_ivr_script(req: IVRScriptUpdate, admin_id: int = Depends(get_admin_us
 def api_call_logs():
     with get_db_conn() as conn:
         logs = conn.execute("SELECT * FROM call_api_logs ORDER BY id DESC").fetchall()
-    return {"logs": [dict(row) for row in logs]}from fastapi import APIRouter, File, UploadFile, Form
+    return {"logs": [dict(row) for row in logs]}
+
+from fastapi import APIRouter, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 import pandas as pd
 from database import get_db_conn
